@@ -1,5 +1,5 @@
 # Introduction
-Emerald is a commandline sequence aligner that explores the suboptimal space and calculates **$\alpha$-safety windows**: parts of a suboptimal alignment that are contained in an $\alpha$ proportion of all suboptimal alignments.
+Emerald is a commandline protein sequence aligner that explores the suboptimal space and calculates **$\alpha$-safety windows**: parts of a suboptimal alignment that are contained in an $\alpha$ proportion of all suboptimal alignments.
 Emerald takes FASTA cluster files and aligns one selected representative sequence to all the other sequences.\
 EMERALD's features include
 - controlling the length of the safety windows ( $\alpha$ parameter) and controlling the size of the suboptimal space ( $\Delta$ parameter)
