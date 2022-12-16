@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include <vector>
 #include <gmpxx.h>
 
