@@ -35,5 +35,5 @@ Run with $\alpha$ = 0.75 and $\Delta$ = 8.
 ```
 Use edit distance with only optimal alignments and 100%-safety and multi threading:
 ```
-./emerald -f example.fasta -a 1 -d 0 --costmat edit_distance.txt --gapcost 1 --startgap 0
+./emerald -f example.fasta -a 1 -d 0 --costmat edit_distance.txt --gapcost 1 --startgap 0 --threads 8
 ```
