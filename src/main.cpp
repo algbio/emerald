@@ -1,4 +1,4 @@
-#include <assert.h>
+//#include <cassert>
 #include <algorithm>
 #include <getopt.h>
 #include <iostream>
@@ -60,7 +60,7 @@ bool help_flag = false;
 bool read_file = false;
 bool read_cost_matrix = false;
 int64_t print_alignments = 0;
-std::string reference = "-";
+std::string reference = "";
 int64_t threads = 1;
 
 // BLOSUM62 matrix
@@ -326,23 +326,11 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 
-	char delim = proteins[0].descriptor.find('|') != std::string::npos ? '|' : ':'; // '|' is used by swiss prot, ':' is used by alpha fold
 	// find reference protein
-	auto split = [&](std::string str, char delimiter) -> std::vector<std::string> {
-		size_t pos = 0;
-		std::vector<std::string> ret;
-		while ((pos = str.find(delimiter)) != std::string::npos) {
-			std::string token = str.substr(0, pos);
-			ret.push_back(token);
-			str.erase(0, pos + 1); // + 1 for delimiter length
-		}
-		ret.push_back(str);
-		return ret;
-	};
-	if (reference != "-") {
+	if (reference != "") {
 		bool found = false;
 		for (int64_t i = 0; i < PS; i++) {
-			if (reference == split(proteins[i].descriptor, delim)[1]) {
+			if (proteins[i].descriptor.find(reference) != std::string::npos) {
 				if (found)
 					std::cerr << "Representative identity found more than once. Using the last found protein as reference.\n";
 				ref = i;
