@@ -1,4 +1,6 @@
 # EMERALD manual
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/emerald/badges/version.svg)](https://anaconda.org/bioconda/emerald)
+[![License](https://img.shields.io/badge/licence-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 1. [Introduction](#sec1)
 2. [Installation](#sec2)\
@@ -31,7 +33,10 @@ You can download the EMERALD binary in the ![Releases page](https://github.com/a
 
 <a name="sec2.1"></a>
 ### Conda installation
-This section is still todo, a conda installation will be provided.
+EMERALD can be installed via conda:
+```
+ conda install -c bioconda emerald 
+ ```
 
 <a name="sec2.2"></a>
 ### Compile from source
