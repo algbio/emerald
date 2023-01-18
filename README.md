@@ -35,7 +35,7 @@ You can download the EMERALD binary in the ![Releases page](https://github.com/a
 ### Conda installation
 EMERALD can be installed via conda:
 ```
- conda install -c bioconda emerald 
+ conda install -c conda-forge -c bioconda emerald 
  ```
 
 <a name="sec2.2"></a>
