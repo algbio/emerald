@@ -11,6 +11,7 @@
 3.2. [Command line options](#sec3.2)\
 3.3. [EMERALD output](#sec3.3)\
 3.4. [Example](#sec3.4)
+4. [About EMERALD](#sec4)
 
 <a name="sec1"></a>
 # Introduction
@@ -135,3 +136,14 @@ MSFLKKKFDSL
 0 3 0 3
 5 9 4 8
 ```
+<a name="sec4"></a>
+# About EMERALD
+EMERALD is being developed by Andreas Grigorjew in the [Graph Algorithms](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics/teams/graph-algorithms) team part of the [Algorithmic Bioinformatics](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics) group at the University of Helsinki.
+
+If you encounter bugs or want to give feedback, please use the [Issue tracker](https://github.com/algbio/emerald/issues) or write me an [email](mailto:andreas.grigorjew@helsinki.fi).
+
+#### Preprint
+- Andreas Grigorjew, Artur Gynter, Fernando Dias, Benjamin Buchfink, Hajk-Georg Drost and Alexandru I. Tomescu, "Sensitive inference of alignment-safe intervals from biodiverse protein sequence clusters using EMERALD", *bioRxiv* 2023.01.11.523286; doi: https://doi.org/10.1101/2023.01.11.523286
+
+Experimental data was clustered using DIAMOND DeepClust:
+- Buchfink B, Ashkenazy H, Reuter K, Kennedy JA, Drost HG, "Sensitive clustering of protein sequences at tree-of-life scale using DIAMOND DeepClust", *bioRxiv* 2023.01.24.525373; doi: https://doi.org/10.1101/2023.01.24.525373
