@@ -34,6 +34,7 @@ int64_t print_usage(char **argv, int64_t help) {
 	std::cout << "\t-r, --reference    \tProtein identity, selects reference protein. By default, this is the first protein.\n";
 	std::cout << "\t-w, --drawgraph    \tReturns dot code files of all alignments for plotting the Delta suboptimal subgraph (for debug purposes).\n";
 	std::cout << "\t-k, --alignments   \tNon-negative integer n, create a fasta file containing randomly chosen n suboptimal alignments. (Default: 0)\n";
+	std::cout << "\t-m, --windowmerge  \tMerge safety windows if they intersect or are adjacent. EMERALD prints both merged and unmerged safety windows if this option is in use."
 	std::cout << "\t-h, --help         \tShows this help message.\n";
 	return help;
 }
@@ -47,6 +48,7 @@ struct Protein {
 static int verbose_flag;
 bool use_approx = false;
 bool drawgraph = false;
+bool window_merge = false;
 
 float alpha = 0.75, TH = 0;
 int64_t delta = 0;
@@ -153,25 +155,36 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 		windowsp.emplace_back(Lp, Rp);
 	}
 
-
-	std::vector<std::pair<int64_t, int64_t>> merged_intervals;
-	output_stream << windows.size() << '\n';
-	for (int64_t k = 0; k < (int64_t) windows.size(); k++) {
-		auto [x, y] = windows[k];
-		auto [xp, yp] = windowsp[k];
-		K a = window_ratios[k];
-		output_stream << x << ' ' << y << ' ' << xp << ' ' << yp << '\n';
-		std::pair<int64_t, int64_t> merged = std::make_pair(xp, yp);
+	auto merge_window = [&](std::vector<std::pair<int64_t, int64_t>> &merged_intervals, std::pair<int64_t, int64_t> merged) {
 		if (!merged_intervals.empty() && merged_intervals.back().second >= merged.first) {
 			merged.first = merged_intervals.back().first;
 			merged_intervals.pop_back();
 		}
 		merged_intervals.push_back(merged);
+	};
+	std::vector<std::pair<int64_t, int64_t>> merged_intervals_ref, merged_intervals_member;
+	output_stream << windows.size() << '\n';
+	for (int64_t k = 0; k < (int64_t) windows.size(); k++) {
+		auto [x, y] = windows[k];
+		auto [xp, yp] = windowsp[k];
+		output_stream << x << ' ' << y << ' ' << xp << ' ' << yp << '\n';
+
+		merge_window(merged_intervals_ref, std::make_pair(x, y));
+		merge_window(merged_intervals_member, std::make_pair(xp, yp));
+	}
+
+	if (window_merge) {
+		output_stream << "Merged representative safety windows: " << merged_intervals_ref.size() << '\n';
+		for (auto [x, y]: merged_intervals_ref)
+			output_stream << x << ' ' << y << '\n';
+		output_stream << "Merged cluster member safety windows: " << merged_intervals_member.size() << '\n';
+		for (auto [xp, yp]: merged_intervals_member)
+			output_stream << xp << ' ' << yp << '\n';
 	}
 
 	if (verbose_flag) {
 		int64_t safe_positions = 0;
-		for (auto [L, R]: merged_intervals) safe_positions += R - L;
+		for (auto [L, R]: merged_intervals_member) safe_positions += R - L;
 		std::vector<std::pair<int64_t, int64_t>> sno = safe_not_opt(path, swindows, d, false);
 		std::cout << "NUM OF EDGES: " << number_of_edges << std::endl;
 		std::cout << "SAFE POSITIONS OF CLUSTER MEMBER: " << safe_positions << std::endl;
@@ -203,11 +216,12 @@ int main(int argc, char **argv) {
 			{ "approximation", no_argument, 0, 'p' },
 			{ "drawgraph", no_argument, 0, 'w' },
 			{ "alignments", required_argument, 0, 'k' },
+			{ "windowmerge", no_argument, 0, 'm' },
 			{ 0, 0, 0, 0 }
 		};
 	
 		int option_index = 0;
-		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:hi:r:pwk:", long_options, &option_index);
+		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:hi:r:pwk:m", long_options, &option_index);
 		if (c == -1) break;
 
 		switch (c) {
@@ -263,6 +277,8 @@ int main(int argc, char **argv) {
 			case 'k':
 				print_alignments = atoi(optarg);
 				break;
+			case 'm':
+				window_merge = true;
 			case '?': break;
 			default: abort();
 		}
