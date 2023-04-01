@@ -5,3 +5,4 @@ Makefile
 CMakeFiles/
 emerald_linux
 emerald_macos_arm
+.vscode/
