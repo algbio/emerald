@@ -75,6 +75,7 @@ EMERALD defines two kinds of sequences: the singular `representative sequence` a
 ```Ala  Arg  Asn  Asp  Cys  Gln  Glu  Gly  His  Ile  Leu  Lys  Met  Phe  Pro  Ser  Thr  Trp  Tyr  Val```. Examples are given in the [utils](./utils) directory.
 - ```-s, --special {value}``` is an integer assigned to the score of aligned amino acids in which one of the two is not included in the list above.
 - ```-g, --gapcost {value}``` and ```-e, --startgap {value}``` Defines the affine-linear gap score function, by default -1 and -11, respectively.
+- ```-m, --windowmerge``` In addition to printing out the calculated safety windows, EMERALD merges them and prints additional lines with the merged safety windows. Safety windows get merged if they are intersecting or adjacent to each other.
 
 <a name="sec3.3"></a>
 ### EMERALD output
@@ -140,7 +141,7 @@ MSFLKKKFDSL
 # About EMERALD
 EMERALD is being developed by Andreas Grigorjew in the [Graph Algorithms](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics/teams/graph-algorithms) team part of the [Algorithmic Bioinformatics](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics) group at the University of Helsinki.
 
-If you encounter bugs or want to give feedback, please use the [Issue tracker](https://github.com/algbio/emerald/issues) or write me an [email](mailto:andreas.grigorjew@helsinki.fi).
+If you encounter bugs or want to give feedback, please use the [Issue tracker](https://github.com/algbio/emerald/issues).
 
 #### Preprint
 - Andreas Grigorjew, Artur Gynter, Fernando Dias, Benjamin Buchfink, Hajk-Georg Drost and Alexandru I. Tomescu, "Sensitive inference of alignment-safe intervals from biodiverse protein sequence clusters using EMERALD", *bioRxiv* 2023.01.11.523286; doi: https://doi.org/10.1101/2023.01.11.523286

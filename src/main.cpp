@@ -34,7 +34,7 @@ int64_t print_usage(char **argv, int64_t help) {
 	std::cout << "\t-r, --reference    \tProtein identity, selects reference protein. By default, this is the first protein.\n";
 	std::cout << "\t-w, --drawgraph    \tReturns dot code files of all alignments for plotting the Delta suboptimal subgraph (for debug purposes).\n";
 	std::cout << "\t-k, --alignments   \tNon-negative integer n, create a fasta file containing randomly chosen n suboptimal alignments. (Default: 0)\n";
-	std::cout << "\t-m, --windowmerge  \tMerge safety windows if they intersect or are adjacent. EMERALD prints both merged and unmerged safety windows if this option is in use."
+	std::cout << "\t-m, --windowmerge  \tMerge safety windows if they intersect or are adjacent. EMERALD prints both merged and unmerged safety windows if this option is in use. (Default: Off)\n"
 	std::cout << "\t-h, --help         \tShows this help message.\n";
 	return help;
 }
