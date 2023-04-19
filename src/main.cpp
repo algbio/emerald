@@ -6,6 +6,7 @@
 #include <random>
 #include <vector>
 #include <fstream>
+#include <filesystem>
 #include <unordered_map>
 #include <string>
 #include <sstream>
@@ -18,24 +19,32 @@
 #include "optimal_paths.h"
 #include "draw_subgraph.h"
 
+namespace fs = std::filesystem;
+
 int64_t print_usage(char **argv, int64_t help) {
-	std::cout << "How to run: " << argv[0] << " -f <clusterfile> [OPTION...]\n\n";
-	std::cout << "\t-a, --alpha        \tFloating value, choose edges that appear in (alpha*100)% of all\n";
-	std::cout << "\t                   \t(sub-)optimal paths to be safe. (Default: 0.75, Range: (0.5, 1])\n";
-	std::cout << "\t-p, --approximation\tBoolean, if true, big integers will be approximated by doubles. Output might be less accurate, but running speed will be increased. (Default: false)\n";
-	std::cout << "\t-d, --delta        \tInteger value, defines suboptimal paths to be in the delta neighborhood of the optimal. (Default: 0, Range: [0.0, inf))\n";
-	std::cout << "\t-c, --costmat      \tReads the aligning score of two symbols from a text file.\n";
-	std::cout << "\t                   \tThe text file is a lower triangular matrix with 20 lines. (Default: BLOSUM62)\n";
-	std::cout << "\t-g, --gapcost      \tInteger, set the score of aligning a character to a gap. (Default: 1)\n";
-	std::cout << "\t-e, --startgap     \tInteger, set the score of starting a gap alignment. (Default: 11)\n";
-	std::cout << "\t-s, --special      \tInteger, sets the score of aligning symbols with special characters.\n";
-	std::cout << "\t                   \tINF value ignores these charachters. (Default: 1)\n";
-	std::cout << "\t-i, --threads      \tInteger, specifies the number of threads (Default: 1).\n";
-	std::cout << "\t-r, --reference    \tProtein identity, selects reference protein. By default, this is the first protein.\n";
-	std::cout << "\t-w, --drawgraph    \tReturns dot code files of all alignments for plotting the Delta suboptimal subgraph (for debug purposes).\n";
-	std::cout << "\t-k, --alignments   \tNon-negative integer n, create a fasta file containing randomly chosen n suboptimal alignments. (Default: 0)\n";
-	std::cout << "\t-m, --windowmerge  \tMerge safety windows if they intersect or are adjacent. EMERALD prints both merged and unmerged safety windows if this option is in use. (Default: Off)\n";
-	std::cout << "\t-h, --help         \tShows this help message.\n";
+	std::cout << "Usage: " << argv[0] << " -f <clusterfile> [arguments]\n\n";
+	std::cout << "Arguments:\n";
+	std::cout << "\t-a, --alpha <value>      \tFloating value, choose edges that appear in (alpha*100)% of all\n";
+	std::cout << "\t                         \t(sub-)optimal paths to be safe. (Default: 0.75, Range: (0.5, 1])\n";
+	std::cout << "\t-p, --approximation      \tApproximates big integers with doubles. Output might be less accurate,\n";
+	std::cout << "\t                         \tbut running speed will be increased.\n";
+	std::cout << "\t-d, --delta <value>      \tInteger value, defines suboptimal paths to be in the delta neighborhood of\n";
+	std::cout << "\t                         \tthe optimal. (Default: 0, Range: [0.0, inf))\n";
+	std::cout << "\t-c, --costmat <file>     \tReads the aligning score of two symbols from a text file.\n";
+	std::cout << "\t                         \tThe text file is a lower triangular matrix with 20 lines. (Default: BLOSUM62)\n";
+	std::cout << "\t-g, --gapcost <value>    \tInteger, set the score of aligning a character to a gap. (Default: 1)\n";
+	std::cout << "\t-e, --startgap <value>   \tInteger, set the score of starting a gap alignment. (Default: 11)\n";
+	std::cout << "\t-s, --special <value>    \tInteger, sets the score of aligning symbols with special characters.\n";
+	std::cout << "\t                         \tINF value ignores these charachters. (Default: 1)\n";
+	std::cout << "\t-i, --threads <value>    \tInteger, specifies the number of threads (Default: 1).\n";
+	std::cout << "\t-r, --reference <protein>\tProtein identity, selects reference protein. By default, this is the first protein.\n";
+	std::cout << "\t-w, --drawgraph <dir>    \tReturns dot code files of all alignments in an existent directory for plotting\n";
+	std::cout << "\t                         \tthe Delta suboptimal subgraph.\n";
+	std::cout << "\t-k, --alignments <value> \tNon-negative integer n, creates a fasta file in the current working directory containing\n";
+	std::cout << "\t                         \trandomly chosen n suboptimal alignments. (Default: 0)\n";
+	std::cout << "\t-m, --windowmerge        \tMerge safety windows if they intersect or are adjacent. EMERALD prints both merged and\n";
+	std::cout << "\t                         \tunmerged safety windows if this option is in use. (Default: Off)\n";
+	std::cout << "\t-h, --help               \tShows this help message.\n";
 	return help;
 }
 
@@ -48,6 +57,7 @@ struct Protein {
 static int verbose_flag;
 bool use_approx = false;
 bool drawgraph = false;
+std::string drawgraph_dir = ".";
 bool window_merge = false;
 
 float alpha = 0.75, TH = 0;
@@ -137,7 +147,7 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 
 	if (drawgraph) {
 		std::string dot = draw_subgraph<K>(i, (int64_t) a.size() + 1, (int64_t) b.size() + 1, d, ratios, alpha, a, b);
-		std::string file_g = "fasta_" + std::to_string(i) + ".dot";
+		std::string file_g = drawgraph_dir + "/dotcode_fasta_" + std::to_string(i) + ".dot";
 		std::ofstream str(file_g, std::ofstream::out);
 		str << dot;
 		str.close();
@@ -214,7 +224,7 @@ int main(int argc, char **argv) {
 			{ "threads", required_argument, 0, 'i' },
 			{ "reference", required_argument, 0, 'r' },
 			{ "approximation", no_argument, 0, 'p' },
-			{ "drawgraph", no_argument, 0, 'w' },
+			{ "drawgraph", required_argument, 0, 'w' },
 			{ "alignments", required_argument, 0, 'k' },
 			{ "windowmerge", no_argument, 0, 'm' },
 			{ 0, 0, 0, 0 }
@@ -272,6 +282,7 @@ int main(int argc, char **argv) {
 				use_approx = true;
 				break;
 			case 'w':
+				drawgraph_dir = optarg;
 				drawgraph = true;
 				break;
 			case 'k':
@@ -290,14 +301,20 @@ int main(int argc, char **argv) {
 	if (!read_file)
 		return print_usage(argv, 1);
 
+	if (drawgraph && !fs::exists(fs::path(drawgraph_dir))) {
+		std::cerr << "Error: directory " << drawgraph_dir << " does not exist.\n";
+		return 1;
+	}
+
 	if (alpha > 1.0)
 		std::cerr << "Warning: for alpha values > 1.0 the program will not return any safety windows.\n";
 	else if (alpha <= 0.5)
 		std::cerr << "Warning: for alpha values <= 0.5 the program will not behave well defined and might crash.\n";
 
-	if (print_alignments < 0)
-		std::cerr << "Warning: alignments value is negative, will be treated as 0.\n";
-	else if (print_alignments > 0) {
+	if (print_alignments < 0) {
+		std::cerr << "Warning: the number of alignments to be printed is negative (" << print_alignments << "), it will be treated as 0.\n";
+		print_alignments = 0;
+	} else if (print_alignments > 0) {
 		std::string subop_fasta_file = "suboptimal_" + file_without_path;
 		std::ofstream ofs;
 		ofs.open(subop_fasta_file, std::ofstream::out | std::ofstream::trunc);
