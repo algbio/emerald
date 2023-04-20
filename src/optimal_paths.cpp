@@ -25,10 +25,11 @@ bool is_gap(Dag &d, const int64_t v, const int64_t u, bool for_representative) {
 	return !is_internal(d, v, u) && (for_representative ? d.transr[v].first == d.transr[u].first : d.transr[v].second == d.transr[u].second);
 }
 
-std::vector<std::vector<int64_t>> alignments_into_fasta(int64_t number_of_paths, Dag &d, const std::string &a, const std::string &b, const std::string &fasta_file, const std::string &id, const std::string &descr) {
+std::vector<std::vector<int64_t>> alignments_into_fasta(int64_t number_of_paths, Dag &d, const std::string &a, const std::string &b, const std::string &fasta_file) {
 	std::string alignment = "";
 	std::ofstream fasta_stream;
 	fasta_stream.open(fasta_file, std::ofstream::app);
+	std::cout << "File created: ./" << fasta_file << std::endl;
 	int64_t al_idx = 0;
 	std::function<void(std::string, int64_t)> print_alignment = [&](std::string s, int64_t c) {
 		fasta_stream << s << '\n';

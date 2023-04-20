@@ -67,7 +67,7 @@ int64_t GAP_COST = -1;
 int64_t START_GAP = -11;
 int64_t SP = -1;
 bool ignore_special = false;
-std::string file, cost_matrix_file, file_without_path;
+std::string file, cost_matrix_file, file_without_path, file_without_path_and_ending;
 bool help_flag = false;
 bool read_file = false;
 bool read_cost_matrix = false;
@@ -119,8 +119,11 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 	std::vector<std::vector<int64_t>> adj = d.adj;
 
 	if (print_alignments > 0) {
-		std::string subop_fasta_file = "suboptimal_" + file_without_path;
-		alignments_into_fasta(print_alignments, d, a, b, subop_fasta_file, std::to_string(i), proteins[i].descriptor);
+		std::string subop_fasta_file = "suboptimal_" + file_without_path_and_ending + '_' + std::to_string(i) + ".fasta";
+		for (int fidx = 1; fs::exists(fs::path(subop_fasta_file)); fidx++) {
+			subop_fasta_file = "suboptimal_" + file_without_path_and_ending + '_' + std::to_string(i) + '(' + std::to_string(fidx) + ").fasta";
+		}
+		alignments_into_fasta(print_alignments, d, a, b, subop_fasta_file);
 	}
 
 	// Find the number of v-t paths (am) and the number of s-v paths (ram) for all nodes v
@@ -268,6 +271,7 @@ int main(int argc, char **argv) {
 				file = optarg;
 				file_without_path = file.substr(file.find_last_of("/\\") + 1);
 				if (file_without_path == "") file_without_path = file; // file was in the same directory and does not contain / or '\\'
+				file_without_path_and_ending = file_without_path.substr(0, file_without_path.find_last_of("."));
 				break;
 			case 'h':
 				help_flag = true;
@@ -314,11 +318,6 @@ int main(int argc, char **argv) {
 	if (print_alignments < 0) {
 		std::cerr << "Warning: the number of alignments to be printed is negative (" << print_alignments << "), it will be treated as 0.\n";
 		print_alignments = 0;
-	} else if (print_alignments > 0) {
-		std::string subop_fasta_file = "suboptimal_" + file_without_path;
-		std::ofstream ofs;
-		ofs.open(subop_fasta_file, std::ofstream::out | std::ofstream::trunc);
-		ofs.close();
 	}
 
 	if (read_cost_matrix) {

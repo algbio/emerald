@@ -35,7 +35,7 @@ bool is_internal(Dag &d, const int64_t v, const int64_t u);
 bool is_gap(Dag &d, const int64_t v, const int64_t u, bool for_representative);
 
 // Print suboptimal alignments into a fasta file
-std::vector<std::vector<int64_t>> alignments_into_fasta(int64_t print_alignments, Dag &d, const std::string &a, const std::string &b, const std::string &fasta_file, const std::string &id, const std::string &descr);
+std::vector<std::vector<int64_t>> alignments_into_fasta(int64_t print_alignments, Dag &d, const std::string &a, const std::string &b, const std::string &fasta_file);
 
 // Construct alignment paths
 std::vector<std::vector<std::vector<std::vector<Node>>>> build_dp_matrix(const std::string &a,
