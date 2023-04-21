@@ -22,8 +22,8 @@
 namespace fs = std::filesystem;
 
 int64_t print_usage(char **argv, int64_t help) {
-	std::cout << "Usage: " << argv[0] << " -f <clusterfile> [arguments]\n\n";
-	std::cout << "Arguments:\n";
+	std::cout << "Usage: " << argv[0] << " -f <clusterfile> -o <outputfile> [arguments]\n\n";
+	std::cout << "Optional arguments:\n";
 	std::cout << "\t-a, --alpha <value>      \tFloating value, choose edges that appear in (alpha*100)% of all\n";
 	std::cout << "\t                         \t(sub-)optimal paths to be safe. (Default: 0.75, Range: (0.5, 1])\n";
 	std::cout << "\t-p, --approximation      \tApproximates big integers with doubles. Output might be less accurate,\n";
@@ -67,9 +67,9 @@ int64_t GAP_COST = -1;
 int64_t START_GAP = -11;
 int64_t SP = -1;
 bool ignore_special = false;
-std::string file, cost_matrix_file, file_without_path, file_without_path_and_ending;
+std::string input_file, output_file, cost_matrix_file, file_without_path, file_without_path_and_ending;
 bool help_flag = false;
-bool read_file = false;
+bool input_exists = false, output_exists = false;
 bool read_cost_matrix = false;
 int64_t print_alignments = 0;
 std::string reference = "";
@@ -203,6 +203,7 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 		std::cout << "SAFE POSITIONS OF CLUSTER MEMBER: " << safe_positions << std::endl;
 		output_stream << "Safe edges not included in optimal paths: " << sno.size() << " (" << double(sno.size())/double(number_of_edges) * 100 << "%)\n";
 	}
+	std::cout << "Alignment " << i << " finished\n";
 }
 
 int main(int argc, char **argv) {
@@ -223,6 +224,7 @@ int main(int argc, char **argv) {
 			{ "startgap", required_argument, 0, 'e' },
 			{ "special", required_argument, 0, 's' },
 			{ "file", required_argument, 0, 'f' },
+			{ "output", required_argument, 0, 'o' },
 			{ "help", no_argument, 0, 'h' },
 			{ "threads", required_argument, 0, 'i' },
 			{ "reference", required_argument, 0, 'r' },
@@ -234,7 +236,7 @@ int main(int argc, char **argv) {
 		};
 	
 		int option_index = 0;
-		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:hi:r:pwk:m", long_options, &option_index);
+		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:o:hi:r:pwk:m", long_options, &option_index);
 		if (c == -1) break;
 
 		switch (c) {
@@ -267,11 +269,15 @@ int main(int argc, char **argv) {
 				else SP = atoi(optarg);
 				break;
 			case 'f':
-				read_file = true;
-				file = optarg;
-				file_without_path = file.substr(file.find_last_of("/\\") + 1);
-				if (file_without_path == "") file_without_path = file; // file was in the same directory and does not contain / or '\\'
+				input_exists = true;
+				input_file = optarg;
+				file_without_path = input_file.substr(input_file.find_last_of("/\\") + 1);
+				if (file_without_path == "") file_without_path = input_file; // input_file was in the same directory and does not contain / or '\\'
 				file_without_path_and_ending = file_without_path.substr(0, file_without_path.find_last_of("."));
+				break;
+			case 'o':
+				output_exists = true;
+				output_file = optarg;
 				break;
 			case 'h':
 				help_flag = true;
@@ -302,8 +308,10 @@ int main(int argc, char **argv) {
 	if (help_flag)
 		return print_usage(argv, 0);
 
-	if (!read_file)
+	if (!input_exists || !output_exists) {
+		std::cerr << "Error: No " << (!input_exists ? "input" : "output") << " file given.\n";
 		return print_usage(argv, 1);
+	}
 
 	if (drawgraph && !fs::exists(fs::path(drawgraph_dir))) {
 		std::cerr << "Error: directory " << drawgraph_dir << " does not exist.\n";
@@ -336,7 +344,7 @@ int main(int argc, char **argv) {
 		return false;
 	};
 
-	std::ifstream input(file);
+	std::ifstream input(input_file);
 	proteins.clear();
 	for (std::string line; std::getline(input, line); ) {
 		if ((int64_t) line.size() <= 0) continue;
@@ -372,10 +380,13 @@ int main(int argc, char **argv) {
 		if (!found) std::cerr << "Reference identity not found, using the first protein as reference.\n";
 	}
 
+	std::ofstream output_stream;
+	output_stream.open(output_file, std::ofstream::app);
+
 	// reference protein and number of proteins in the cluster
-	std::cout << proteins[ref].descriptor << '\n' << proteins[ref].sequence << '\n';
-	std::cout << PS << '\n';
-	std::vector<std::stringbuf> output(PS);
+	output_stream << proteins[ref].descriptor << '\n' << proteins[ref].sequence << '\n';
+	output_stream << PS << '\n';
+	std::vector<std::stringbuf> output(PS); // TODO: This might be quite RAM heavy
 	random_order_of_alignments.clear();
 	for (int64_t i = 0; i < PS; i++) if (i != ref) random_order_of_alignments.push_back(i);
 	if (threads > 1) {
@@ -391,5 +402,5 @@ int main(int argc, char **argv) {
 		else
 			run_case<double, double>(j, output);
 
-	for (int64_t i = 0; i < PS; i++) if (i != ref) std::cout << output[i].str();
+	for (int64_t i = 0; i < PS; i++) if (i != ref) output_stream << output[i].str();
 }
