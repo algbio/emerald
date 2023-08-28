@@ -10,7 +10,7 @@
 3.1. [EMERALD input](#sec3.1)\
 3.2. [Command line options](#sec3.2)\
 3.3. [EMERALD output](#sec3.3)\
-3.4. [Example](#sec3.4)
+3.4. [Example](#sec3.4)\
 3.5. [Precomputed alignment safety windows](#sec3.5)
 4. [About EMERALD](#sec4)
 
