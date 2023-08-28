@@ -318,6 +318,11 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	// Welcome message
+	std::cout << "EMERALD is free software (GPL v3) and is maintained on https://github.com/algbio/emerald.\n";
+	std::cout << "Please cite the following reference when using EMERALD for your research:\n";
+	std::cout << "Grigorjew, A., Gynter, A., Dias, F.H. et al. Sensitive inference of alignment-safe intervals from biodiverse protein sequence clusters using EMERALD. Genome Biol 24, 168 (2023). https://doi.org/10.1186/s13059-023-03008-6\n\n";
+
 	if (alpha > 1.0)
 		std::cerr << "Warning: for alpha values > 1.0 the program will not return any safety windows.\n";
 	else if (alpha <= 0.5)

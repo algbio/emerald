@@ -11,6 +11,7 @@
 3.2. [Command line options](#sec3.2)\
 3.3. [EMERALD output](#sec3.3)\
 3.4. [Example](#sec3.4)
+3.5. [Precomputed alignment safety windows](#sec3.5)
 4. [About EMERALD](#sec4)
 
 <a name="sec1"></a>
@@ -139,6 +140,10 @@ MSFLKKKFDSL
 0 3 0 3
 5 9 4 8
 ```
+<a name="sec3.5"></a>
+### Precomputed alignment safety windows
+We already pre-computed safety windows for the DIAMOND2 DeepClust clustered SwissProt Database (~400k seqs). If users wish to use this pre-computed dataset, they can download it from [figshare](https://figshare.com/articles/dataset/data_zip/21720299/4).
+
 <a name="sec4"></a>
 # About EMERALD
 EMERALD is being developed by Andreas Grigorjew in the [Graph Algorithms](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics/teams/graph-algorithms) team part of the [Algorithmic Bioinformatics](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics) group at the University of Helsinki.
