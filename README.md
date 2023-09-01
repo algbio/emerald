@@ -66,7 +66,8 @@ EMERALD defines two kinds of sequences: the singular `representative sequence` a
 <a name="sec3.2"></a>
 ### Command line options
 ##### The basic options are the following
-- ```-f, --file {FILE}``` Path to FASTA file, **mandatory argument**.
+- ```-f, --file {FILE}``` Path to input FASTA file, **mandatory argument**.
+-  ```-o, -output {FILE}``` Path to output file, **mandatory argument**.
 - ```-a, --alpha {value}``` $\alpha$ value for safety, $0.5 < \alpha \leq 1$, by default: 0.75. The safety windows will be partial alignments contained in an $\alpha$ proportion of all alignments. If $\alpha$ is chosen outside this range, a warning will be displayed. EMERALD will keep running but it can crash.
 - ```-d, --delta {value}``` $\Delta$ value for the size of the suboptimal space, any positive integer, by default: 0. If $\Delta$ is larger, more alignments will be considered suboptimal, which will decrease the number and lengths of the safety windows.
 - ```-i, --threads {value}``` How many threads to use. By default 1 thread is used.
@@ -77,6 +78,7 @@ EMERALD defines two kinds of sequences: the singular `representative sequence` a
 - ```-s, --special {value}``` is an integer assigned to the score of aligned amino acids in which one of the two is not included in the list above.
 - ```-g, --gapcost {value}``` and ```-e, --startgap {value}``` Defines the affine-linear gap score function, by default -1 and -11, respectively.
 - ```-m, --windowmerge``` In addition to printing out the calculated safety windows, EMERALD merges them and prints additional lines with the merged safety windows. Safety windows get merged if they are intersecting or adjacent to each other.
+- ```-w, --drawgraph {dir}``` **Experimental**: Writes dot graph files into the given directory plotting the suboptimal alignment graph.
 
 By default, EMERALD uses the [BLOSUM62](https://en.wikipedia.org/wiki/BLOSUM) substitution matrix for its cost assignments.
 
@@ -114,7 +116,7 @@ MSFLKKKFDSL
 ```
 Output:
 ```
-$ ./emerald -f examples/ex1.fasta -a 0.75 -d 8
+$ ./emerald -f examples/ex1.fasta -o examples/ex1.out -a 0.75 -d 8
 >Representative sequence
 MSFDLKSKFLG
 5

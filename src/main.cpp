@@ -315,7 +315,7 @@ int main(int argc, char **argv) {
 
 	if (drawgraph && !fs::exists(fs::path(drawgraph_dir))) {
 		std::cerr << "Error: directory " << drawgraph_dir << " does not exist.\n";
-		return 1;
+		return 2;
 	}
 
 	// Welcome message
@@ -367,8 +367,8 @@ int main(int argc, char **argv) {
 	int64_t PS = (int64_t) proteins.size();
 
 	if (PS == 0) {
-		std::cout << "Protein sequence list is empty.\n";
-		return 2;
+		std::cerr << "Error: Protein sequence list is empty.\n";
+		return 3;
 	}
 
 	// find reference protein
