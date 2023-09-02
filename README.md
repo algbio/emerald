@@ -84,7 +84,7 @@ By default, EMERALD uses the [BLOSUM62](https://en.wikipedia.org/wiki/BLOSUM) su
 
 <a name="sec3.3"></a>
 ### EMERALD output
-EMERALD's output is in stdout. The first part of the output is the following.
+EMERALD's output is stored in the given output file, while stdout is used for log messages. The first part of the output is the following.
 ```
 Representative sequence description
 Representative sequence
@@ -114,7 +114,7 @@ MSLKDKKFLKS
 >Cluster member 4
 MSFLKKKFDSL
 ```
-Output:
+Output (in `examples/ex1.out`):
 ```
 $ ./emerald -f examples/ex1.fasta -o examples/ex1.out -a 0.75 -d 8
 >Representative sequence
