@@ -67,7 +67,7 @@ EMERALD defines two kinds of sequences: the singular `representative sequence` a
 ### Command line options
 ##### The basic options are the following
 - ```-f, --file {FILE}``` Path to input FASTA file, **mandatory argument**.
--  ```-o, -output {FILE}``` Path to output file, **mandatory argument**.
+-  ```-o, -output {FILE}``` Path to output file, **mandatory argument**. **Note**: EMERALD does not erase the content of the output file but only appends to the existing file.
 - ```-a, --alpha {value}``` $\alpha$ value for safety, $0.5 < \alpha \leq 1$, by default: 0.75. The safety windows will be partial alignments contained in an $\alpha$ proportion of all alignments. If $\alpha$ is chosen outside this range, a warning will be displayed. EMERALD will keep running but it can crash.
 - ```-d, --delta {value}``` $\Delta$ value for the size of the suboptimal space, any positive integer, by default: 0. If $\Delta$ is larger, more alignments will be considered suboptimal, which will decrease the number and lengths of the safety windows.
 - ```-i, --threads {value}``` How many threads to use. By default 1 thread is used.

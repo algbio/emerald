@@ -31,7 +31,7 @@ std::vector<std::vector<int64_t>> alignments_into_fasta(int64_t number_of_paths,
 	fasta_stream.open(fasta_file, std::ofstream::app);
 	std::cout << "Print alignments: created file ./" << fasta_file << std::endl;
 	int64_t al_idx = 0;
-	std::function<void(std::string, int64_t)> print_alignment = [&](std::string s, int64_t c) {
+	auto print_alignment = [&](std::string s, int64_t c) {
 		fasta_stream << s << '\n';
 	};
 
