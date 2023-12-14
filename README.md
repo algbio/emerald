@@ -155,6 +155,7 @@ If you encounter bugs or want to give feedback, please use the [Issue tracker](h
 #### Paper
 Please cite the following reference when using EMERALD for your research:
 - Grigorjew, A., Gynter, A., Dias, F.H. *et al.* Sensitive inference of alignment-safe intervals from biodiverse protein sequence clusters using EMERALD. Genome Biol **24**, 168 (2023). https://doi.org/10.1186/s13059-023-03008-6
+- An author erratum is available [here](https://github.com/algbio/emerald-analysis/blob/main/emerald_erratum.pdf).
 
 Experimental data was clustered using DIAMOND DeepClust:
 - Buchfink B, Ashkenazy H, Reuter K, Kennedy JA, Drost HG, "Sensitive clustering of protein sequences at tree-of-life scale using DIAMOND DeepClust", *bioRxiv* 2023.01.24.525373; doi: https://doi.org/10.1101/2023.01.24.525373
