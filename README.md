@@ -150,7 +150,7 @@ We already pre-computed safety windows for the DIAMOND2 DeepClust clustered Swis
 # About EMERALD
 EMERALD is being developed by Andreas Grigorjew in the [Graph Algorithms](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics/teams/graph-algorithms) team part of the [Algorithmic Bioinformatics](https://www.helsinki.fi/en/researchgroups/algorithmic-bioinformatics) group at the University of Helsinki.
 
-If you encounter bugs or want to give feedback, please use the [Issue tracker](https://github.com/algbio/emerald/issues) or contact me [directly](https://www.helsinki.fi/en/about-us/people/people-finder/andreas-grigorjew-9431091).
+If you encounter bugs or want to give feedback, please use the [Issue tracker](https://github.com/algbio/emerald/issues) or contact me [directly](mailto:emerald-tool@andreasgrigorjew.de).
 
 #### Paper
 Please cite the following reference when using EMERALD for your research:
