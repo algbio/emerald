@@ -24,8 +24,6 @@ int64_t print_usage(char **argv, int64_t help) {
 	std::cout << "Optional arguments:\n";
 	std::cout << "\t-a, --alpha <value>      \tFloating value, choose edges that appear in (alpha*100)% of all\n";
 	std::cout << "\t                         \t(sub-)optimal paths to be safe. (Default: 0.75, Range: (0.5, 1])\n";
-	std::cout << "\t-p, --approximation      \tApproximates big integers with doubles. Output might be less accurate,\n";
-	std::cout << "\t                         \tbut running speed will be increased.\n";
 	std::cout << "\t-d, --delta <value>      \tInteger value, defines suboptimal paths to be in the delta neighborhood of\n";
 	std::cout << "\t                         \tthe optimal. (Default: 0, Range: [0.0, inf))\n";
 	std::cout << "\t-c, --costmat <file>     \tReads the aligning score of two symbols from a text file.\n";
@@ -58,7 +56,6 @@ struct Protein {
 };
 
 static int verbose_flag;
-bool use_approx = false;
 bool drawgraph = false;
 std::string drawgraph_dir = ".";
 bool window_merge = false;
@@ -108,7 +105,6 @@ std::vector<Protein> proteins;
 int64_t ref = 0; // reference protein
 std::vector<int64_t> random_order_of_alignments;
 
-template<class T, class K>
 void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 	int64_t i = random_order_of_alignments[j];
 	std::ostream output_stream(&(output[i]));
@@ -118,7 +114,7 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 
 	// Create suboptimal space
 	bool random_alignment_as_optimal = false; // TODO: command line option
-	Dag d = gen_dag<K>(a, b, cost_matrix, delta, GAP_COST, START_GAP, random_alignment_as_optimal, verbose_flag);
+	Dag d = gen_dag(a, b, cost_matrix, delta, GAP_COST, START_GAP, random_alignment_as_optimal, verbose_flag);
 	std::vector<std::vector<int64_t>> adj = d.adj;
 
 	if (print_alignments > 0) {
@@ -133,12 +129,12 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 	std::vector<std::vector<int64_t>> radj((int64_t) adj.size());
 	for (int64_t i = 0; i < (int64_t) adj.size(); i++)
 		for (int64_t v: adj[i]) radj[v].push_back(i);
-	std::vector<T> am = number_of_paths<T>(adj);
-	std::vector<T> ram = number_of_paths<T>(radj);
+	std::vector<mpz_class> am = number_of_paths(adj);
+	std::vector<mpz_class> ram = number_of_paths(radj);
 
 	// Find a path that contains all safety windows (it always exists if alpha \in (0.5, 1])
-	std::vector<std::vector<K>> ratios = path_ratios<T, K>(d, am, ram);
-	std::vector<int64_t> path = find_alpha_path<K>(d, ratios, alpha, verbose_flag);
+	std::vector<std::vector<mpq_class>> ratios = path_ratios(d, am, ram);
+	std::vector<int64_t> path = find_alpha_path(d, ratios, alpha, verbose_flag);
 	
 	// Just make sure that every node is contained only once in the path
 	std::unordered_map<int64_t, int64_t> cnt;
@@ -148,11 +144,11 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 	}
 
 	// Find safety windows
-	std::vector<K> r = find_ratios<K>(path, adj, ratios);
-	auto [swindows, window_ratios, number_of_edges] = safety_windows<T, K>(am, ram, path, alpha);
+	std::vector<mpq_class> r = find_ratios(path, adj, ratios);
+	auto [swindows, window_ratios, number_of_edges] = safety_windows(am, ram, path, alpha);
 
 	if (drawgraph) {
-		std::string dot = draw_subgraph<K>(i, (int64_t) a.size() + 1, (int64_t) b.size() + 1, d, ratios, alpha, a, b);
+		std::string dot = draw_subgraph(i, (int64_t) a.size() + 1, (int64_t) b.size() + 1, d, ratios, alpha, a, b);
 		std::string file_g = drawgraph_dir + "/dotcode_fasta_" + std::to_string(i) + ".dot";
 		std::ofstream str(file_g, std::ofstream::out);
 		str << dot;
@@ -231,7 +227,6 @@ int main(int argc, char **argv) {
 			{ "help", no_argument, 0, 'h' },
 			{ "threads", required_argument, 0, 'i' },
 			{ "reference", required_argument, 0, 'r' },
-			{ "approximation", no_argument, 0, 'p' },
 			{ "drawgraph", required_argument, 0, 'w' },
 			{ "alignments", required_argument, 0, 'k' },
 			{ "windowmerge", no_argument, 0, 'm' },
@@ -290,9 +285,6 @@ int main(int argc, char **argv) {
 				break;
 			case 'r':
 				reference = optarg;
-				break;
-			case 'p':
-				use_approx = true;
 				break;
 			case 'w':
 				drawgraph_dir = optarg;
@@ -405,10 +397,7 @@ int main(int argc, char **argv) {
 
 	#pragma omp parallel for num_threads(threads)
 	for (int64_t j = 0; j < PS - 1; j++)
-		if (!use_approx)
-			run_case<mpz_class, mpq_class>(j, output);
-		else
-			run_case<double, double>(j, output);
+		run_case(j, output);
 
 	for (int64_t i = 0; i < PS; i++) if (i != ref) output_stream << output[i].str();
 }

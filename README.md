@@ -20,7 +20,6 @@ EMERALD is a command line protein sequence aligner that explores the suboptimal 
 EMERALD takes FASTA cluster files and aligns one selected representative sequence to all the other sequences.\
 EMERALD's features include
 - using custom substitution matrices (by default: BLOSUM62) and affine-linear gap score
-- approximating large integers with floats for gain of computational speed but loss of accurate output
 - multi threading
 - selecting a custom representative sequence
 

@@ -175,3 +175,55 @@ int64_t score_of_random_alignment(const std::vector<std::vector<std::vector<std:
 	}
 	return score;
 }
+
+Dag gen_dag(const std::string &a, const std::string &b, const int64_t cost_matrix[21][21],
+		const int64_t delta, const int64_t GAP_COST, const int64_t START_GAP, bool random_alignment_as_optimal, int &verbose_flag) {
+	std::vector<std::vector<std::vector<std::vector<Node>>>> e = build_dp_matrix(a, b, GAP_COST, START_GAP, cost_matrix, 1);
+	int64_t n = (int64_t) e.size() - 1;
+	assert(n > 0);
+	int64_t m = (int64_t) e[0].size() - 1;
+	assert(m > 0);
+
+	// find highest scores for each node
+	std::vector<std::vector<std::vector<std::vector<Node>>>> er(n + 1, std::vector<std::vector<std::vector<Node>>>(m + 1, std::vector<std::vector<Node>>(3)));
+	for (int64_t i = 0; i <= n; i++) for (int64_t j = 0; j <= m; j++) for (int64_t k = 2; k >= 0; k--) {
+		for (Node nxt: e[i][j][k])
+			er[nxt.N_index][nxt.M_index][nxt.type].push_back(Node(i, j, k, nxt.cost));
+	}
+
+	std::vector<std::vector<std::vector<int64_t>>> dp = opt_alignment(e, 0);
+	std::vector<std::vector<std::vector<int64_t>>> dpr = opt_alignment(er, 1);
+	assert(dp[n][m][0] == dpr[0][0][0]);
+
+	const int64_t OPT = (random_alignment_as_optimal ? score_of_random_alignment(e) : dp[n][m][0]);
+
+	int64_t current = 0;
+	std::vector<std::vector<int64_t>> adj(1);
+	std::vector<std::vector<std::pair<int64_t, int64_t>>> adj_costs(1);
+	std::map<std::pair<int64_t, int64_t>, std::array<int64_t, 3>> trans; // translate to index
+	std::map<int64_t, std::pair<int64_t, int64_t>> transr; // translate index to pair
+	trans[std::make_pair(0, 0)] = {0, -1, -1};
+	transr[0] = std::make_pair(0, 0);
+	if (verbose_flag)
+		std::cout << "OPT: " << OPT << std::endl;
+
+	auto add_node = [&](const Node &node) {
+		if (trans.find(std::make_pair(node.N_index, node.M_index)) == trans.end()) {
+			trans[std::make_pair(node.N_index, node.M_index)] = {-1, -1, -1};
+		}
+		if (trans[std::make_pair(node.N_index, node.M_index)][node.type] == -1) {
+			trans[std::make_pair(node.N_index, node.M_index)][node.type] = ++current;
+			transr[current] = std::make_pair(node.N_index, node.M_index);
+			adj.push_back(std::vector<int64_t>());
+			adj_costs.push_back(std::vector<std::pair<int64_t, int64_t>>());
+		}
+	};
+
+
+	int64_t subpaths = 0, arcs = 0;
+	std::map<std::pair<int64_t, int64_t>, bool> in_optimal;
+	auto check_th = [&](const int64_t k, const int64_t OPT, const int64_t delta) {
+		if (k < OPT && k >= OPT - delta) subpaths++;
+		return k >= OPT - delta && k <= OPT + delta;
+	};
+}
