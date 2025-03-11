@@ -25,59 +25,21 @@ bool is_gap(Dag &d, const int64_t v, const int64_t u, bool for_representative) {
 	return !is_internal(d, v, u) && (for_representative ? d.transr[v].first == d.transr[u].first : d.transr[v].second == d.transr[u].second);
 }
 
-std::vector<std::vector<int64_t>> alignments_into_fasta(int64_t number_of_paths, Dag &d, const std::string &a, const std::string &b, const std::string &fasta_file) {
-	std::string alignment = "";
+void alignment_with_safety_windows(Dag &d, const std::vector<int64_t> &path, const Protein &a, const Protein &b, const std::string &fasta_file) {
+	std::string alignment_a = "", alignment_b = "";
+	for (size_t i = 1; i < path.size(); i++) {
+		std::pair<int64_t, int64_t> p = d.transr[path[i - 1]];
+		std::pair<int64_t, int64_t> n = d.transr[path[i]];
+		if (n == p) continue; // node internal edge
+		alignment_a += (n.first == p.first + 1 ? a.sequence[p.first] : '_');
+		alignment_b += (n.second == p.second + 1 ? b.sequence[p.second] : '_');
+	}
+
 	std::ofstream fasta_stream;
 	fasta_stream.open(fasta_file, std::ofstream::app);
-	std::cout << "Print alignments: created file ./" << fasta_file << std::endl;
-	int64_t al_idx = 0;
-	auto print_alignment = [&](std::string s, int64_t c) {
-		fasta_stream << s << '\n';
-	};
-
-	// calculate set of paths P as the top suboptimal alignments
-	int64_t n = (int64_t) d.adj.size();
-	std::vector<std::vector<int64_t>> P;
-	std::vector<int64_t> costs_of_final_paths;
-	std::vector<int64_t> count(n, 0LL);
-
-	std::vector<std::pair<int64_t, std::vector<int64_t>>> B; // pair (cost, path)
-	B.push_back(std::make_pair(0LL, std::vector<int64_t>{d.src}));
-	while (!B.empty() && count[d.sink] < number_of_paths) {
-		std::pop_heap(B.begin(), B.end());
-		auto [cost, Pp] = B.back();
-		B.pop_back();
-		count[Pp.back()]++;
-		if (Pp.back() == d.sink)
-			P.push_back(Pp), costs_of_final_paths.push_back(cost);
-		if (count[Pp.back()] <= number_of_paths) {
-			for (auto [v, nxtc]: d.adj_costs[Pp.back()]) {
-				std::vector<int64_t> Pv = Pp;
-				Pv.push_back(v);
-				B.push_back(std::make_pair(cost + nxtc, Pv));
-				std::push_heap(B.begin(), B.end());
-			}
-		}
-	}
-
-	int64_t ci = 0;
-	for (const std::vector<int64_t> &path: P) {
-		std::string alignment_a = "", alignment_b = "";
-		for (int64_t i = 1; i < (int64_t) path.size(); i++) {
-			std::pair<int64_t, int64_t> p = d.transr[path[i - 1]];
-			std::pair<int64_t, int64_t> n = d.transr[path[i]];
-			if (n == p) continue; // node internal edge
-			alignment_a += (n.first == p.first + 1 ? a[p.first] : '_');
-			alignment_b += (n.second == p.second + 1 ? b[p.second] : '_');
-		}
-		print_alignment(alignment_a, costs_of_final_paths[ci]);
-		print_alignment(alignment_b, costs_of_final_paths[ci++]);
-		print_alignment("", 0);
-	}
-
+	fasta_stream << a.descriptor << '\n' << alignment_a << '\n';
+	fasta_stream << b.descriptor << '\n' << alignment_b << '\n';
 	fasta_stream.close();
-
-	return P; // for unit testing purposes
 }
 
 std::vector<std::vector<std::vector<std::vector<Node>>>> build_dp_matrix(const std::string &a,
@@ -177,7 +139,7 @@ int64_t score_of_random_alignment(const std::vector<std::vector<std::vector<std:
 }
 
 Dag gen_dag(const std::string &a, const std::string &b, const int64_t cost_matrix[21][21],
-		const int64_t delta, const int64_t GAP_COST, const int64_t START_GAP, bool random_alignment_as_optimal, int &verbose_flag) {
+		const int64_t delta, const int64_t GAP_COST, const int64_t START_GAP, bool random_alignment_as_optimal, const int &verbose_flag) {
 	std::vector<std::vector<std::vector<std::vector<Node>>>> e = build_dp_matrix(a, b, GAP_COST, START_GAP, cost_matrix, 1);
 	int64_t n = (int64_t) e.size() - 1;
 	assert(n > 0);
@@ -226,4 +188,33 @@ Dag gen_dag(const std::string &a, const std::string &b, const int64_t cost_matri
 		if (k < OPT && k >= OPT - delta) subpaths++;
 		return k >= OPT - delta && k <= OPT + delta;
 	};
+		auto check_opt = [&](const int64_t k, const int64_t OPT, const int64_t delta) {
+		return k == OPT;
+	};
+
+	for (int64_t i = 0; i <= n; i++) for (int64_t j = 0; j <= m; j++) for (int64_t k = 2; k >= 0; k--) {
+		if (!check_th(dp[i][j][k] + dpr[i][j][k], OPT, delta)) continue;
+		add_node(Node(i, j, k, 0));
+		for (const Node &nxt: e[i][j][k]) {
+			if (!check_th(dp[nxt.N_index][nxt.M_index][nxt.type] + dpr[nxt.N_index][nxt.M_index][nxt.type], OPT, delta)) continue;
+			if (check_th(dpr[nxt.N_index][nxt.M_index][nxt.type] + dp[i][j][k] + nxt.cost, OPT, delta)) {
+				arcs++;
+				add_node(nxt);
+				in_optimal[std::make_pair(trans[std::make_pair(i, j)][k],
+						trans[std::make_pair(nxt.N_index, nxt.M_index)][nxt.type])] = check_opt(dpr[nxt.N_index][nxt.M_index][nxt.type] + dp[i][j][k] + nxt.cost, OPT, delta);
+				adj[trans[std::make_pair(i, j)][k]].push_back(trans[std::make_pair(nxt.N_index, nxt.M_index)][nxt.type]);
+				adj_costs[trans[std::make_pair(i, j)][k]].emplace_back((trans[std::make_pair(nxt.N_index, nxt.M_index)][nxt.type]), nxt.cost);
+			}
+		}
+	}
+
+	if (verbose_flag) {
+		std::cout << "TOTAL: " << 3*(n+1)*(m+1) << std::endl;
+		std::cout << "CURRENT: " << current << std::endl;
+		std::cout << "Number of arcs: " << arcs << std::endl;
+		std::cout << OPT - delta << std::endl;
+		if (subpaths) std::cout << "Found subpaths: " << subpaths << std:: endl;
+	}
+
+	return { adj, adj_costs, 0, trans[std::make_pair(n, m)][0], trans, transr, in_optimal };
 }

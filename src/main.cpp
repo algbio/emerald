@@ -33,11 +33,12 @@ int64_t print_usage(char **argv, int64_t help) {
 	std::cout << "\t-s, --special <value>    \tInteger, sets the score of aligning symbols with special characters.\n";
 	std::cout << "\t                         \tINF value ignores these charachters. (Default: 1)\n";
 	std::cout << "\t-i, --threads <value>    \tInteger, specifies the number of threads (Default: 1).\n";
-	std::cout << "\t-r, --reference <protein>\tProtein identity, selects reference protein. By default, this is the first protein.\n";
+	std::cout << "\t-r, --reference <protein>\tProtein identity, selects reference protein. By default, there is no reference, and every pair of\n";
+	std::cout << "\t                         \tproteins is aligned with each other.\n";
 	std::cout << "\t-w, --drawgraph <dir>    \tReturns dot code files of all alignments in an existent directory for plotting\n";
 	std::cout << "\t                         \tthe Delta suboptimal subgraph.\n";
-	std::cout << "\t-k, --alignments <value> \tNon-negative integer n, creates a fasta file in the current working directory containing\n";
-	std::cout << "\t                         \trandomly chosen n suboptimal alignments. (Default: 0)\n";
+	std::cout << "\t-k, --alignments <file> \tCreates a fasta file in the current working directory containing one alignment for every\n";
+	std::cout << "\t                         \tsequence pair. Each alignment traverses every safety window. (Default: None)\n";
 	std::cout << "\t-m, --windowmerge        \tMerge safety windows if they intersect or are adjacent. EMERALD prints both merged and\n";
 	std::cout << "\t                         \tunmerged safety windows if this option is in use. (Default: Off)\n";
 	std::cout << "\t-h, --help               \tShows this help message.\n";
@@ -48,12 +49,6 @@ bool file_exists(const std::string &filename) {
 	struct stat buffer;
 	return (stat (filename.c_str(), &buffer) == 0);
 }
-
-struct Protein {
-	std::string descriptor;
-	std::string sequence;
-	Protein(std::string descriptor) : descriptor(descriptor) {}
-};
 
 static int verbose_flag;
 bool drawgraph = false;
@@ -67,11 +62,10 @@ int64_t GAP_COST = -1;
 int64_t START_GAP = -11;
 int64_t SP = -1;
 bool ignore_special = false;
-std::string input_file, output_file, cost_matrix_file, file_without_path, file_without_path_and_ending;
+std::string input_file, output_file, cost_matrix_file, file_without_path, file_without_path_and_ending, print_alignments;
 bool help_flag = false;
 bool input_exists = false, output_exists = false;
 bool read_cost_matrix = false;
-int64_t print_alignments = 0;
 std::string reference = "";
 int64_t threads = 1;
 
@@ -102,10 +96,10 @@ int64_t cost_matrix[21][21] = {
 };
 
 std::vector<Protein> proteins;
-int64_t ref = 0; // reference protein
+int64_t global_ref = -1; // reference protein
 std::vector<int64_t> random_order_of_alignments;
 
-void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
+void run_case(const int64_t j, const int64_t ref, std::vector<std::stringbuf> &output) {
 	int64_t i = random_order_of_alignments[j];
 	std::ostream output_stream(&(output[i]));
 	const std::string &a = proteins[ref].sequence;
@@ -117,14 +111,6 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 	Dag d = gen_dag(a, b, cost_matrix, delta, GAP_COST, START_GAP, random_alignment_as_optimal, verbose_flag);
 	std::vector<std::vector<int64_t>> adj = d.adj;
 
-	if (print_alignments > 0) {
-		std::string subop_fasta_file = "suboptimal_" + file_without_path_and_ending + '_' + std::to_string(i) + ".fasta";
-		for (int fidx = 1; file_exists(subop_fasta_file); fidx++) {
-			subop_fasta_file = "suboptimal_" + file_without_path_and_ending + '_' + std::to_string(i) + '(' + std::to_string(fidx) + ").fasta";
-		}
-		alignments_into_fasta(print_alignments, d, a, b, subop_fasta_file);
-	}
-
 	// Find the number of v-t paths (am) and the number of s-v paths (ram) for all nodes v
 	std::vector<std::vector<int64_t>> radj((int64_t) adj.size());
 	for (int64_t i = 0; i < (int64_t) adj.size(); i++)
@@ -132,11 +118,15 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 	std::vector<mpz_class> am = number_of_paths(adj);
 	std::vector<mpz_class> ram = number_of_paths(radj);
 
-	// Find a path that contains all safety windows (it always exists if alpha \in (0.5, 1])
+	// Find a path that contains all safety windows (it always exists if 0.5 < alpha <= 1)
 	std::vector<std::vector<mpq_class>> ratios = path_ratios(d, am, ram);
 	std::vector<int64_t> path = find_alpha_path(d, ratios, alpha, verbose_flag);
+
+	if (print_alignments != "") {
+		alignment_with_safety_windows(d, path, proteins[ref], proteins[i], print_alignments);
+	}
 	
-	// Just make sure that every node is contained only once in the path
+	// Make sure that every node is contained only once in the path
 	std::unordered_map<int64_t, int64_t> cnt;
 	for (int64_t v: path) {
 		assert(cnt[v] == 0);
@@ -184,6 +174,25 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 		merge_window(merged_intervals_ref, std::make_pair(x, y));
 		merge_window(merged_intervals_member, std::make_pair(xp, yp));
 	}
+	auto print_sequences_with_sw_coloured = [&](const std::string &s, const std::vector<std::pair<int64_t, int64_t>> &merged_intervals) {
+		for (int64_t ch = 0, k = 0; ch < (int64_t) s.size(); ch++) {
+			int64_t x = merged_intervals[k].first;
+			int64_t y = merged_intervals[k].second;
+			while (ch >= y) {
+				if (k+1 == (int64_t) merged_intervals.size()) break;
+				k++;
+				x = merged_intervals[k].first;
+				y = merged_intervals[k].second;
+			}
+			if (x <= ch && ch < y) std::cout << "\033[1;42m" << s[ch] << "\033[0m";
+			else std::cout << s[ch];
+		}
+		std::cout << '\n';
+	};
+	std::cout << "Alignment (" << j+1 << '/' << ref << ")\n" << proteins[ref].descriptor << '\n' << proteins[i].descriptor << '\n';
+	print_sequences_with_sw_coloured(a, merged_intervals_ref);
+	print_sequences_with_sw_coloured(b, merged_intervals_member);
+	std::cout << '\n';
 
 	if (window_merge) {
 		output_stream << "Merged representative safety windows: " << merged_intervals_ref.size() << '\n';
@@ -202,12 +211,9 @@ void run_case(const int64_t j, std::vector<std::stringbuf> &output) {
 		std::cout << "SAFE POSITIONS OF CLUSTER MEMBER: " << safe_positions << std::endl;
 		output_stream << "Safe edges not included in optimal paths: " << sno.size() << " (" << double(sno.size())/double(number_of_edges) * 100 << "%)\n";
 	}
-	std::cout << "Alignment " << i << " finished\n";
 }
 
 int main(int argc, char **argv) {
-	//test_gen_dag();
-	//return 0;
 	std::cerr << std::fixed << std::setprecision(10); // debug output
 	std::cout << std::fixed << std::setprecision(10); // debug output
 
@@ -215,7 +221,7 @@ int main(int argc, char **argv) {
 	int64_t c;
 	while (1) {
 		static struct option long_options[] = {
-			{ "verbose", no_argument, &verbose_flag, 1 }, // this does nothing for now
+			{ "verbose", no_argument, &verbose_flag, 1 },
 			{ "alpha", required_argument, 0, 'a' },
 			{ "delta", required_argument, 0, 'd' },
 			{ "costmat", required_argument, 0, 'c' },
@@ -234,7 +240,7 @@ int main(int argc, char **argv) {
 		};
 	
 		int option_index = 0;
-		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:o:hi:r:pwk:m", long_options, &option_index);
+		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:o:hi:r:wk:m", long_options, &option_index);
 		if (c == -1) break;
 
 		switch (c) {
@@ -291,7 +297,7 @@ int main(int argc, char **argv) {
 				drawgraph = true;
 				break;
 			case 'k':
-				print_alignments = atoi(optarg);
+				print_alignments = optarg;
 				break;
 			case 'm':
 				window_merge = true;
@@ -323,9 +329,8 @@ int main(int argc, char **argv) {
 	else if (alpha <= 0.5)
 		std::cerr << "Warning: for alpha values <= 0.5 the program will not behave well defined and might crash.\n";
 
-	if (print_alignments < 0) {
-		std::cerr << "Warning: the number of alignments to be printed is negative (" << print_alignments << "), it will be treated as 0.\n";
-		print_alignments = 0;
+	if (file_exists(print_alignments)) {
+		std::cerr << "Warning: alignment file " << print_alignments << " already exists. The alignments will be appended to the file.\n";
 	}
 
 	if (read_cost_matrix) {
@@ -367,37 +372,40 @@ int main(int argc, char **argv) {
 	}
 
 	// find reference protein
-	if (reference != "") {
-		bool found = false;
-		for (int64_t i = 0; i < PS; i++) {
-			if (proteins[i].descriptor.find(reference) != std::string::npos) {
-				if (found)
-					std::cerr << "Representative identity found more than once. Using the last found protein as reference.\n";
-				ref = i;
-				found = true;
-			}
-		}
-		if (!found) std::cerr << "Reference identity not found, using the first protein as reference.\n";
-	}
+	//if (reference != "") {
+	//	bool found = false;
+	//	for (int64_t i = 0; i < PS; i++) {
+	//		if (proteins[i].descriptor.find(reference) != std::string::npos) {
+	//			if (found)
+	//				std::cerr << "Reference identity found more than once. Using the last found protein as reference.\n";
+	//			ref = i;
+	//			found = true;
+	//		}
+	//	}
+	//	if (!found) std::cerr << "Reference identity not found, retreat to aligning all pairs of proteins without reference.\n";
+	//}
 
 	std::ofstream output_stream;
 	output_stream.open(output_file, std::ofstream::app);
 
 	// reference protein and number of proteins in the cluster
-	output_stream << proteins[ref].descriptor << '\n' << proteins[ref].sequence << '\n';
-	output_stream << PS << '\n';
-	std::vector<std::stringbuf> output(PS); // TODO: This might be quite RAM heavy
-	random_order_of_alignments.clear();
-	for (int64_t i = 0; i < PS; i++) if (i != ref) random_order_of_alignments.push_back(i);
-	if (threads > 1) {
-		std::random_device rd;
-		std::mt19937 g(rd());
-		std::shuffle(random_order_of_alignments.begin(), random_order_of_alignments.end(), g);
+	for (int64_t ref = 1; ref < PS; ref++) {
+		output_stream << proteins[ref].descriptor << '\n' << proteins[ref].sequence << '\n';
+		std::vector<std::stringbuf> output(PS); // TODO: Do we really want to do this?
+		random_order_of_alignments.clear();
+		for (int64_t i = 0; i < ref; i++) random_order_of_alignments.push_back(i);
+		if (threads > 1) {
+			std::random_device rd;
+			std::mt19937 g(rd());
+			std::shuffle(random_order_of_alignments.begin(), random_order_of_alignments.end(), g);
+		}
+
+		#pragma omp parallel for num_threads(threads)
+		for (int64_t j = 0; j < ref; j++)
+			run_case(j, ref, output);
+
+		for (int64_t i = 0; i < PS; i++) if (i != ref) output_stream << output[i].str();
+		if (ref+1 < PS) output_stream << '\n';
 	}
-
-	#pragma omp parallel for num_threads(threads)
-	for (int64_t j = 0; j < PS - 1; j++)
-		run_case(j, output);
-
-	for (int64_t i = 0; i < PS; i++) if (i != ref) output_stream << output[i].str();
+	std::cout << "Safety intervals stored in " << output_file << ".\n";
 }
