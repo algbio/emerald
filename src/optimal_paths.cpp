@@ -216,5 +216,5 @@ Dag gen_dag(const std::string &a, const std::string &b, const int64_t cost_matri
 		if (subpaths) std::cout << "Found subpaths: " << subpaths << std:: endl;
 	}
 
-	return { adj, adj_costs, 0, trans[std::make_pair(n, m)][0], trans, transr, in_optimal };
+	return { adj, adj_costs, 0, trans[std::make_pair(n, m)][0], trans, transr, dp, dpr, in_optimal };
 }

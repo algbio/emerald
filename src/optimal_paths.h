@@ -15,6 +15,8 @@ struct Dag {
 	int64_t src, sink;
 	std::map<std::pair<int64_t, int64_t>, std::array<int64_t, 3>> trans;
 	std::map<int64_t, std::pair<int64_t, int64_t>> transr;
+	std::vector<std::vector<std::vector<int64_t>>> dp;
+	std::vector<std::vector<std::vector<int64_t>>> dpr;
 	std::map<std::pair<int64_t, int64_t>, bool> in_optimal;
 };
 
