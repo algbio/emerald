@@ -7,6 +7,7 @@
 
 // TODO: print indices for vertices, print optimal lengths for edges and vertices
 // print alpha for every safety window
+// print smallest d for every edge to appear
 
 std::string draw_subgraph(const int64_t IDX, const int64_t n, const int64_t m, const Dag &d, const std::vector<std::vector<mpq_class>> &ratios, mpq_class alpha, const std::string &a, const std::string &b) {
 	mpq_class mo(-1);
@@ -55,7 +56,7 @@ std::string draw_subgraph(const int64_t IDX, const int64_t n, const int64_t m, c
 			if (i == 0 && j > 0) node_label = std::string(1, b[j - 1]);
 			else if (i > 0 && j == 0) node_label = std::string(1, a[i - 1]);
 			else node_label = "(" + std::to_string(i) + ", " + std::to_string(j) + ")";
-			std::string node = "\"" + std::to_string(i) + "_" + std::to_string(j) + "\" [label=\"" + node_label + "\", xlabel=\"" + std::to_string(d.dp[d.trans.at(std::make_pair(i, j))] + d.dpr[d.trans.at(std::make_pair(i, j))]) + "\"";
+			std::string node = "\"" + std::to_string(i) + "_" + std::to_string(j) + "\" [label=\"" + node_label + "\", xlabel=\"" + std::to_string(d.dp[i][j][0] + d.dpr[i][j][0]) + "\"";
 			if ((i > 0 && j > 0) || (i == 0 && j == 0))
 				node += (has(i, j) ? ", style=filled, shape=circle]" : ", style=invis]");
 			else
@@ -67,12 +68,12 @@ std::string draw_subgraph(const int64_t IDX, const int64_t n, const int64_t m, c
 				auto [l, k] = from[dir];
 				if (outside(l, k)) continue;
 				bool is_edge = has(i, j) && has(l, k) && d.trans.at(std::make_pair(i, j))[dir] != -1;
-				std::string edge = "\"" + std::to_string(l) + "_" + std::to_string(k) + "\" -- \"" + std::to_string(i) + "_" + std::to_string(j) + "\", xlabel=\"" + std::to_string(d.dp[d.trans.at(std::make_pair(l, k))] + d.dpr[d.trans.at(std::make_pair(i, j))]) + "\"";
+				std::string edge = "\"" + std::to_string(l) + "_" + std::to_string(k) + "\" -- \"" + std::to_string(i) + "_" + std::to_string(j) + "\", xlabel=\"" + std::to_string(d.dpr[l][k][0] + d.dp[i][j][0]) + "\"";
 				if (!has(i, j) || !has(l, k) || !is_edge) {
 					edge += " [style=invis]";
 				} else {
 					mpq_class s;
-					if ((s = is_safe(l, k, i, j)) > mo) edge += " [color=green, penwidth=5, xlabel=\"" + std::to_string(s.get_mpq_t()) + "\"]";
+					if ((s = is_safe(l, k, i, j)) > mo) edge += " [color=green, penwidth=5, xlabel=\"" + s.get_str() + "\"]";
 					if (is_opt(l, k, i, j)) edge += " [penwidth=3]";
 					else edge += " [color=grey, penwidth=2]";
 				}

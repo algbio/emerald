@@ -18,6 +18,7 @@
 #include "safety_windows.h"
 #include "optimal_paths.h"
 #include "draw_subgraph.h"
+#include "write_json.h"
 
 int64_t print_usage(char **argv, int64_t help) {
 	std::cout << "Usage: " << argv[0] << " -f <clusterfile> -o <outputfile> [arguments]\n\n";
@@ -33,6 +34,8 @@ int64_t print_usage(char **argv, int64_t help) {
 	std::cout << "\t-s, --special <value>    \tInteger, sets the score of aligning symbols with special characters.\n";
 	std::cout << "\t                         \tINF value ignores these charachters. (Default: 1)\n";
 	std::cout << "\t-i, --threads <value>    \tInteger, specifies the number of threads (Default: 1).\n";
+	std::cout << "\t-j, --json <file>        \tCreate a json file that contains information about the alignment and the\n";
+	std::cout << "\t                         \tcomputed safety windows. Note: one file per sequence pair is created.\n";
 	std::cout << "\t-r, --reference <protein>\tProtein identity, selects reference protein. By default, there is no reference, and every pair of\n";
 	std::cout << "\t                         \tproteins is aligned with each other.\n";
 	std::cout << "\t-w, --drawgraph <dir>    \tReturns dot code files of all alignments in an existent directory for plotting\n";
@@ -62,10 +65,11 @@ int64_t GAP_COST = -1;
 int64_t START_GAP = -11;
 int64_t SP = -1;
 bool ignore_special = false;
-std::string input_file, output_file, cost_matrix_file, file_without_path, file_without_path_and_ending, print_alignments;
+std::string input_file, output_file, cost_matrix_file, file_without_path, file_without_path_and_ending, print_alignments, json_file;
 bool help_flag = false;
 bool input_exists = false, output_exists = false;
 bool read_cost_matrix = false;
+bool print_json = false;
 std::string reference = "";
 int64_t threads = 1;
 
@@ -137,6 +141,7 @@ void run_case(const int64_t j, const int64_t ref, std::vector<std::stringbuf> &o
 	std::vector<mpq_class> r = find_ratios(path, adj, ratios);
 	auto [swindows, window_ratios, number_of_edges] = safety_windows(am, ram, path, alpha);
 
+
 	if (drawgraph) {
 		std::string dot = draw_subgraph(i, (int64_t) a.size() + 1, (int64_t) b.size() + 1, d, ratios, alpha, a, b);
 		std::string file_g = drawgraph_dir + "/dotcode_fasta_" + std::to_string(i) + ".dot";
@@ -175,6 +180,10 @@ void run_case(const int64_t j, const int64_t ref, std::vector<std::stringbuf> &o
 		merge_window(merged_intervals_member, std::make_pair(xp, yp));
 	}
 	auto print_sequences_with_sw_coloured = [&](const std::string &s, const std::vector<std::pair<int64_t, int64_t>> &merged_intervals) {
+		if ((int64_t) merged_intervals.size() == 0) {
+			std::cout << s << '\n';
+			return;
+		}
 		for (int64_t ch = 0, k = 0; ch < (int64_t) s.size(); ch++) {
 			int64_t x = merged_intervals[k].first;
 			int64_t y = merged_intervals[k].second;
@@ -201,6 +210,13 @@ void run_case(const int64_t j, const int64_t ref, std::vector<std::stringbuf> &o
 		output_stream << "Merged cluster member safety windows: " << merged_intervals_member.size() << '\n';
 		for (auto [xp, yp]: merged_intervals_member)
 			output_stream << xp << ' ' << yp << '\n';
+	}
+
+	if (print_json) {
+		std::string desc1 = proteins[ref].descriptor.substr(1);
+		std::string desc2 = proteins[i].descriptor.substr(1);
+		std::string adapted_json_file = desc1 + "_" + desc2 + "_" + json_file;
+		write_json_file(adapted_json_file, proteins[ref], proteins[i], d, windows, windowsp, ratios);
 	}
 
 	if (verbose_flag) {
@@ -232,6 +248,7 @@ int main(int argc, char **argv) {
 			{ "output", required_argument, 0, 'o' },
 			{ "help", no_argument, 0, 'h' },
 			{ "threads", required_argument, 0, 'i' },
+			{ "json", required_argument, 0, 'j' },
 			{ "reference", required_argument, 0, 'r' },
 			{ "drawgraph", required_argument, 0, 'w' },
 			{ "alignments", required_argument, 0, 'k' },
@@ -240,7 +257,7 @@ int main(int argc, char **argv) {
 		};
 	
 		int option_index = 0;
-		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:o:hi:r:wk:m", long_options, &option_index);
+		c = getopt_long(argc, argv, "a:d:c:g:e:s:f:o:hi:j:r:w:k:m", long_options, &option_index);
 		if (c == -1) break;
 
 		switch (c) {
@@ -288,6 +305,10 @@ int main(int argc, char **argv) {
 				break;
 			case 'i':
 				threads = atoi(optarg);
+				break;
+			case 'j':
+				json_file = optarg;
+				print_json = true;
 				break;
 			case 'r':
 				reference = optarg;
