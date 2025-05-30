@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 
 #include <gmpxx.h>
-#include <omp.h>
+
 
 #include "alpha_safe_paths.h"
 #include "safety_windows.h"
@@ -411,22 +411,22 @@ int main(int argc, char **argv) {
 
 	// reference protein and number of proteins in the cluster
 	for (int64_t ref = 1; ref < PS; ref++) {
-		output_stream << proteins[ref].descriptor << '\n' << proteins[ref].sequence << '\n';
-		std::vector<std::stringbuf> output(PS); // TODO: Do we really want to do this?
-		random_order_of_alignments.clear();
-		for (int64_t i = 0; i < ref; i++) random_order_of_alignments.push_back(i);
-		if (threads > 1) {
-			std::random_device rd;
-			std::mt19937 g(rd());
-			std::shuffle(random_order_of_alignments.begin(), random_order_of_alignments.end(), g);
-		}
+        output_stream << proteins[ref].descriptor << '\n' << proteins[ref].sequence << '\n';
+        std::vector<std::stringbuf> output(PS); // TODO: Do we really want to do this?
+        random_order_of_alignments.clear();
+        for (int64_t i = 0; i < ref; i++) random_order_of_alignments.push_back(i);
+        if (threads > 1) {
+            std::random_device rd;
+            std::mt19937 g(rd());
+            std::shuffle(random_order_of_alignments.begin(), random_order_of_alignments.end(), g);
+        }
 
-		#pragma omp parallel for num_threads(threads)
-		for (int64_t j = 0; j < ref; j++)
-			run_case(j, ref, output);
+        // OpenMP removed: always run serially
+        for (int64_t j = 0; j < ref; j++)
+            run_case(j, ref, output);
 
-		for (int64_t i = 0; i < PS; i++) if (i != ref) output_stream << output[i].str();
-		if (ref+1 < PS) output_stream << '\n';
-	}
-	std::cout << "Safety intervals stored in " << output_file << ".\n";
+        for (int64_t i = 0; i < PS; i++) if (i != ref) output_stream << output[i].str();
+        if (ref+1 < PS) output_stream << '\n';
+    }
+    std::cout << "Safety intervals stored in " << output_file << ".\n";
 }
