@@ -216,7 +216,9 @@ void run_case(const int64_t j, const int64_t ref, std::vector<std::stringbuf> &o
 		std::string desc1 = proteins[ref].descriptor.substr(1);
 		std::string desc2 = proteins[i].descriptor.substr(1);
 		std::string adapted_json_file = desc1 + "_" + desc2 + "_" + json_file;
-		write_json_file(adapted_json_file, proteins[ref], proteins[i], d, windows, windowsp, ratios);
+		std::string test = "test" + json_file;
+		// write_json_file(adapted_json_file, proteins[ref], proteins[i], d, windows, windowsp, ratios);
+		write_json_file(test, proteins[ref], proteins[i], d, windows, windowsp, ratios);
 	}
 
 	if (verbose_flag) {

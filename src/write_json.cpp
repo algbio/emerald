@@ -5,7 +5,8 @@
 
 #include "write_json.h"
 
-void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, Dag &d, std::vector<std::pair<int64_t, int64_t>> &windows, std::vector<std::pair<int64_t, int64_t>> &windowsp, std::vector<std::vector<mpq_class>> &ratio) {
+void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, Dag &d, std::vector<std::pair<int64_t, int64_t>> &windows, std::vector<std::pair<int64_t, int64_t>> &windowsp, std::vector<std::vector<mpq_class>> &ratio)
+{
     std::ofstream output_stream;
     output_stream.open(json_file, std::ofstream::app);
 
@@ -16,41 +17,60 @@ void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, D
         output_stream << "\t\"mem_descriptor\": \"" << mem.descriptor << "\",\n";
         output_stream << "\t\"member_string\": \"" << mem.sequence << "\",\n";
 
-        output_stream << "\t\"alignment_graph\": {\n";
+        // Group edges by coordinates instead of node IDs
+        std::map<std::pair<int64_t, int64_t>, std::map<std::pair<int64_t, int64_t>, double>> coord_graph;
+        
+        for (int64_t i = 0; i < (int64_t)d.adj.size(); i++) {
+            auto coords = d.transr.at(i);
+            
+            for (int64_t j = 0; j < (int64_t)d.adj[i].size(); j++) {
+                auto adj_coords = d.transr.at(d.adj[i][j]);
+                double edge_ratio = ratio[i][j].get_d();
+                
+                // Sum ratios if multiple internal edges connect the same coordinate pairs
+                coord_graph[coords][adj_coords] += edge_ratio;
+            }
+        }
+
+        output_stream << "\t\"alignment_graph\": [\n";
         {
             bool first = true;
-            for (int64_t i = 0; i < (int64_t) d.adj.size(); i++) {
-                assert (d.adj[i].size() == ratio[i].size());
-                
+            for (const auto &[from_coords, edges] : coord_graph) {
                 if (!first) output_stream << ",\n";
                 first = false;
                 
-                // Get the index pair for this node
-                auto coords = d.transr.at(i);
-                int64_t ref_pos = coords.first;
-                int64_t mem_pos = coords.second;
+                output_stream << "\t\t{\n";
+                output_stream << "\t\t\t\"from\": [" << from_coords.first << ", " << from_coords.second << "],\n";
+                output_stream << "\t\t\t\"edges\": [";
                 
-                output_stream << "\t\t\"(" << ref_pos << "," << mem_pos << ")\": [ ";
-                for (int64_t j = 0; j < (int64_t) d.adj[i].size(); j++) {
-                    // Get the index pair for the adjacent node
-                    auto adj_coords = d.transr.at(d.adj[i][j]);
-                    int64_t adj_ref_pos = adj_coords.first;
-                    int64_t adj_mem_pos = adj_coords.second;
-                    
-                    output_stream << "\"((" << adj_ref_pos << "," << adj_mem_pos << ")," << ratio[i][j].get_d() << ")\", ";
+                bool first_edge = true;
+                for (const auto &[to_coords, total_ratio] : edges) {
+                    if (!first_edge) output_stream << ", ";
+                    first_edge = false;
+                    output_stream << "[" << to_coords.first << ", " << to_coords.second << ", " << total_ratio << "]";
                 }
-                output_stream << " ]";
+                output_stream << "]\n\t\t}";
             }
-            output_stream << "\n\t},\n";
+            output_stream << "\n\t],\n";
         }
 
-        output_stream << "\t\"windows_representative\": [ ";
-            for (auto [l, r]: windows) output_stream << "\"(" << l << "," << r << ")\", ";
+        output_stream << "\t\"windows_representative\": [";
+        bool first_window = true;
+        for (auto [l, r] : windows) {
+            if (!first_window) output_stream << ", ";
+            first_window = false;
+            output_stream << "[" << l << ", " << r << "]";
+        }
         output_stream << "],\n";
-        output_stream << "\t\"windows_member\": [ ";
-            for (auto [l, r]: windowsp) output_stream << "\"(" << l << "," << r << ")\", ";
-        output_stream << "],\n";
-
+        
+        output_stream << "\t\"windows_member\": [";
+        first_window = true;
+        for (auto [l, r] : windowsp) {
+            if (!first_window) output_stream << ", ";
+            first_window = false;
+            output_stream << "[" << l << ", " << r << "]";
+        }
+        output_stream << "]\n";  // No comma after the last property
     }
     output_stream << "}\n";
 
