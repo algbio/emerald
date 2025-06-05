@@ -1,15 +1,21 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <gmpxx.h>
+#include <map>  // Add this explicit include
+
+// Include headers that define Protein and Dag structures
+#include "alpha_safe_paths.h"  // Assuming this contains the Dag definition
+#include "optimal_paths.h"     // Assuming this or another header defines Protein
 
 #include "write_json.h"
 
-void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, Dag &d, std::vector<std::pair<int64_t, int64_t>> &windows, std::vector<std::pair<int64_t, int64_t>> &windowsp, std::vector<std::vector<mpq_class>> &ratio)
+void write_json_to_stream(std::ostream &output_stream, Protein &ref, Protein &mem, Dag &d, 
+                         std::vector<std::pair<int64_t, int64_t>> &windows, 
+                         std::vector<std::pair<int64_t, int64_t>> &windowsp, 
+                         std::vector<std::vector<mpq_class>> &ratio)
 {
-    std::ofstream output_stream;
-    output_stream.open(json_file, std::ofstream::app);
-
     output_stream << "{\n";
     {
         output_stream << "\t\"representative_descriptor\": \"" << ref.descriptor << "\",\n";
@@ -73,6 +79,15 @@ void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, D
         output_stream << "]\n";  // No comma after the last property
     }
     output_stream << "}\n";
+}
 
+void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, Dag &d, 
+                    std::vector<std::pair<int64_t, int64_t>> &windows, 
+                    std::vector<std::pair<int64_t, int64_t>> &windowsp, 
+                    std::vector<std::vector<mpq_class>> &ratio)
+{
+    std::ofstream output_stream;
+    output_stream.open(json_file, std::ofstream::app);
+    write_json_to_stream(output_stream, ref, mem, d, windows, windowsp, ratio);
     output_stream.close();
 }
