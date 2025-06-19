@@ -6,9 +6,11 @@
 #include <map>
 #include <unordered_map>
 #include <sstream>
+#include <fstream>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#include <emscripten/bind.h>  // This is the crucial include for EMSCRIPTEN_BINDINGS
 #else
 #define EMSCRIPTEN_KEEPALIVE
 #endif
@@ -19,8 +21,8 @@
 #include "optimal_paths.h"
 #include "write_json.h"
 
-// Function to convert string parameters and perform the actual work
-std::string generate_alignment_json_impl(const std::string& representative_sequence,
+// Implementation of the original C++ style function
+std::string generate_alignment_json(const std::string& representative_sequence,
                                   const std::string& representative_descriptor,
                                   const std::string& member_sequence,
                                   const std::string& member_descriptor,
@@ -63,8 +65,9 @@ std::string generate_alignment_json_impl(const std::string& representative_seque
         {  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP },
     };
     
-    if (gap_cost == 0) gap_cost = -1;  // Use default if not specified
-    if (start_gap == 0) start_gap = -11;  // Use default if not specified
+    // Use defaults if not specified
+    if (gap_cost == 0) gap_cost = -1;  
+    if (start_gap == 0) start_gap = -11;
     
     // Create suboptimal space
     bool random_alignment_as_optimal = false;
@@ -110,43 +113,44 @@ std::string generate_alignment_json_impl(const std::string& representative_seque
     return json_stream.str();
 }
 
-// Static buffer to hold the return string (needs to persist after function call)
-static char* return_buffer = nullptr;
+// C-style wrapper implementation
+extern "C" {
+const char* generate_alignment_json_c(const char* refSeq, const char* refDesc, 
+                                    const char* memSeq, const char* memDesc,
+                                    float alpha, int64_t delta, int64_t gapCost, int64_t startGap) {
+    static std::string result_str;
+    
+    // Call the C++ version
+    result_str = generate_alignment_json(refSeq, refDesc, memSeq, memDesc, 
+                                      alpha, delta, gapCost, startGap);
+    
+    // Return pointer to the static buffer (will persist until next call)
+    return result_str.c_str();
+}
+}
 
-// Main WASM-exposed function with C linkage for export
 #ifdef __EMSCRIPTEN__
-EMSCRIPTEN_KEEPALIVE
+// Embind declarations
+EMSCRIPTEN_BINDINGS(emerald_module) {
+    using namespace emscripten;
+    
+    // Original direct JSON return function
+    function("generateAlignmentJson", &generate_alignment_json);
+}
 #endif
-extern "C" const char* generate_alignment_json(const char* representative_sequence,
-                                  const char* representative_descriptor,
-                                  const char* member_sequence,
-                                  const char* member_descriptor,
-                                  float alpha,
-                                  int64_t delta,
-                                  int64_t gap_cost,
-                                  int64_t start_gap) {
+
+// Standalone function that doesn't rely on main program's argument parsing
+std::string generateAlignmentJson(const std::string& refSeq, 
+                                const std::string& refDesc,
+                                const std::string& memSeq, 
+                                const std::string& memDesc,
+                                float alpha = 0.75, 
+                                int64_t delta = 0,
+                                int64_t gapCost = -1, 
+                                int64_t startGap = -11) {
+    // Create in-memory data structures instead of reading files
+    // Process sequences directly rather than using command line arguments
     
-    // Convert C-style strings to C++ strings
-    std::string result = generate_alignment_json_impl(
-        representative_sequence, 
-        representative_descriptor,
-        member_sequence,
-        member_descriptor,
-        alpha,
-        delta,
-        gap_cost,
-        start_gap
-    );
-    
-    // Free old buffer if it exists
-    if (return_buffer) {
-        free(return_buffer);
-        return_buffer = nullptr;
-    }
-    
-    // Allocate and copy new string
-    return_buffer = (char*)malloc(result.length() + 1);
-    strcpy(return_buffer, result.c_str());
-    
-    return return_buffer;
+    // Your alignment logic here, working directly with the parameters
+    // Return JSON string directly
 }
