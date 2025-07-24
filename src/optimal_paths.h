@@ -18,6 +18,7 @@ struct Dag {
 	std::vector<std::vector<std::vector<int64_t>>> dp;
 	std::vector<std::vector<std::vector<int64_t>>> dpr;
 	std::map<std::pair<int64_t, int64_t>, bool> in_optimal;
+	std::vector<int64_t> opt_path;
 };
 
 struct Node {

@@ -188,7 +188,7 @@ Dag gen_dag(const std::string &a, const std::string &b, const int64_t cost_matri
 		if (k < OPT && k >= OPT - delta) subpaths++;
 		return k >= OPT - delta && k <= OPT + delta;
 	};
-		auto check_opt = [&](const int64_t k, const int64_t OPT, const int64_t delta) {
+	auto check_opt = [&](const int64_t k, const int64_t OPT, const int64_t delta) {
 		return k == OPT;
 	};
 
@@ -208,6 +208,33 @@ Dag gen_dag(const std::string &a, const std::string &b, const int64_t cost_matri
 		}
 	}
 
+	std::vector<int64_t> opt_path;
+	opt_path.push_back(trans[std::make_pair(n, m)][0]);
+	while (opt_path.back() != 0) {
+		auto [i, j] = transr[opt_path.back()];
+		int64_t k = -1; // k is not stored in transr, set to -1 or retrieve from context if needed
+		// Retrieve k by searching which type maps to this node index
+		bool found = false;
+		for (int t = 0; t < 3; ++t) {
+			if (trans[std::make_pair(i, j)][t] == opt_path.back()) {
+				k = t;
+				found = true;
+				break;
+			}
+		}
+		assert(found);
+		found = false;
+		for (const Node &nxt: er[i][j][k]) {
+			if (dp[nxt.N_index][nxt.M_index][nxt.type] + dpr[i][j][k] + nxt.cost == OPT) {
+				opt_path.push_back(trans[std::make_pair(nxt.N_index, nxt.M_index)][nxt.type]);
+				found = true;
+				break;
+			}
+		}
+		assert(found);
+	}
+	std::reverse(opt_path.begin(), opt_path.end());
+
 	if (verbose_flag) {
 		std::cout << "TOTAL: " << 3*(n+1)*(m+1) << std::endl;
 		std::cout << "CURRENT: " << current << std::endl;
@@ -216,5 +243,5 @@ Dag gen_dag(const std::string &a, const std::string &b, const int64_t cost_matri
 		if (subpaths) std::cout << "Found subpaths: " << subpaths << std:: endl;
 	}
 
-	return { adj, adj_costs, 0, trans[std::make_pair(n, m)][0], trans, transr, dp, dpr, in_optimal };
+	return { adj, adj_costs, 0, trans[std::make_pair(n, m)][0], trans, transr, dp, dpr, in_optimal, opt_path };
 }
