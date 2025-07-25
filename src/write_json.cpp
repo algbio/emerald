@@ -80,6 +80,17 @@ void write_json_to_stream(std::ostream &output_stream, Protein &ref, Protein &me
             first_window = false;
             output_stream << "[" << l << ", " << r << "]";
         }
+        output_stream << "],\n";
+        
+        // Add optimal path coordinates
+        output_stream << "\t\"optimal_path\": [";
+        bool first_opt_node = true;
+        for (int64_t node_id : d.opt_path) {
+            if (!first_opt_node) output_stream << ", ";
+            first_opt_node = false;
+            auto coords = d.transr.at(node_id);
+            output_stream << "[" << coords.first << ", " << coords.second << "]";
+        }
         output_stream << "]\n";  // No comma after the last property
     }
     output_stream << "}\n";
