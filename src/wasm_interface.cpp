@@ -21,6 +21,19 @@
 #include "optimal_paths.h"
 #include "write_json.h"
 
+// Helper function to generate alignment strings from a path
+std::pair<std::string, std::string> generate_alignment_strings(Dag &d, const std::vector<int64_t> &path, const Protein &a, const Protein &b) {
+    std::string alignment_a = "", alignment_b = "";
+    for (size_t i = 1; i < path.size(); i++) {
+        std::pair<int64_t, int64_t> p = d.transr[path[i - 1]];
+        std::pair<int64_t, int64_t> n = d.transr[path[i]];
+        if (n == p) continue; // node internal edge
+        alignment_a += (n.first == p.first + 1 ? a.sequence[p.first] : '-');
+        alignment_b += (n.second == p.second + 1 ? b.sequence[p.second] : '-');
+    }
+    return std::make_pair(alignment_a, alignment_b);
+}
+
 // Implementation of the original C++ style function
 std::string generate_alignment_json(const std::string& representative_sequence,
                                   const std::string& representative_descriptor,
@@ -107,9 +120,12 @@ std::string generate_alignment_json(const std::string& representative_sequence,
         windowsp.emplace_back(Lp, Rp);
     }
     
+    // Generate alignment strings
+    auto [alignment_ref, alignment_mem] = generate_alignment_strings(d, path, ref, mem);
+    
     // Generate JSON
     std::stringstream json_stream;
-    write_json_to_stream(json_stream, ref, mem, d, windows, windowsp, ratios);
+    write_json_to_stream(json_stream, ref, mem, d, windows, windowsp, ratios, alignment_ref, alignment_mem);
     return json_stream.str();
 }
 
@@ -148,9 +164,6 @@ std::string generateAlignmentJson(const std::string& refSeq,
                                 int64_t delta = 0,
                                 int64_t gapCost = -1, 
                                 int64_t startGap = -11) {
-    // Create in-memory data structures instead of reading files
-    // Process sequences directly rather than using command line arguments
-    
-    // Your alignment logic here, working directly with the parameters
-    // Return JSON string directly
+    // This function is just a wrapper around the main generate_alignment_json function
+    return generate_alignment_json(refSeq, refDesc, memSeq, memDesc, alpha, delta, gapCost, startGap);
 }

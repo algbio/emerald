@@ -14,7 +14,9 @@
 void write_json_to_stream(std::ostream &output_stream, Protein &ref, Protein &mem, Dag &d, 
                          std::vector<std::pair<int64_t, int64_t>> &windows, 
                          std::vector<std::pair<int64_t, int64_t>> &windowsp, 
-                         std::vector<std::vector<mpq_class>> &ratio)
+                         std::vector<std::vector<mpq_class>> &ratio,
+                         const std::string &alignment_ref,
+                         const std::string &alignment_mem)
 {
     output_stream << "{\n";
     {
@@ -22,6 +24,8 @@ void write_json_to_stream(std::ostream &output_stream, Protein &ref, Protein &me
         output_stream << "\t\"representative_string\": \"" << ref.sequence << "\",\n";
         output_stream << "\t\"mem_descriptor\": \"" << mem.descriptor << "\",\n";
         output_stream << "\t\"member_string\": \"" << mem.sequence << "\",\n";
+        output_stream << "\t\"alignment_representative\": \"" << alignment_ref << "\",\n";
+        output_stream << "\t\"alignment_member\": \"" << alignment_mem << "\",\n";
 
         // Group edges by coordinates instead of node IDs
         std::map<std::pair<int64_t, int64_t>, std::map<std::pair<int64_t, int64_t>, double>> coord_graph;
@@ -84,10 +88,22 @@ void write_json_to_stream(std::ostream &output_stream, Protein &ref, Protein &me
 void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, Dag &d, 
                     std::vector<std::pair<int64_t, int64_t>> &windows, 
                     std::vector<std::pair<int64_t, int64_t>> &windowsp, 
-                    std::vector<std::vector<mpq_class>> &ratio)
+                    std::vector<std::vector<mpq_class>> &ratio,
+                    const std::string &alignment_ref,
+                    const std::string &alignment_mem)
 {
     std::ofstream output_stream;
     output_stream.open(json_file, std::ofstream::app);
-    write_json_to_stream(output_stream, ref, mem, d, windows, windowsp, ratio);
+    write_json_to_stream(output_stream, ref, mem, d, windows, windowsp, ratio, alignment_ref, alignment_mem);
     output_stream.close();
+}
+
+// Overload for backward compatibility
+void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, Dag &d, 
+                    std::vector<std::pair<int64_t, int64_t>> &windows, 
+                    std::vector<std::pair<int64_t, int64_t>> &windowsp, 
+                    std::vector<std::vector<mpq_class>> &ratio)
+{
+    // Call the new version with empty alignment strings
+    write_json_file(json_file, ref, mem, d, windows, windowsp, ratio, "", "");
 }

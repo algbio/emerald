@@ -18,10 +18,20 @@ void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, D
                     std::vector<std::pair<int64_t, int64_t>> &windowsp, 
                     std::vector<std::vector<mpq_class>> &ratio);
 
+// Overload with alignment strings
+void write_json_file(const std::string &json_file, Protein &ref, Protein &mem, Dag &d, 
+                    std::vector<std::pair<int64_t, int64_t>> &windows, 
+                    std::vector<std::pair<int64_t, int64_t>> &windowsp, 
+                    std::vector<std::vector<mpq_class>> &ratio,
+                    const std::string &alignment_ref,
+                    const std::string &alignment_mem);
+
 // Function to write to a stream instead of file
 void write_json_to_stream(std::ostream &output_stream, Protein &ref, Protein &mem, Dag &d, 
                          std::vector<std::pair<int64_t, int64_t>> &windows, 
                          std::vector<std::pair<int64_t, int64_t>> &windowsp, 
-                         std::vector<std::vector<mpq_class>> &ratio);
+                         std::vector<std::vector<mpq_class>> &ratio,
+                         const std::string &alignment_ref,
+                         const std::string &alignment_mem);
 
 #endif // WRITE_JSON_H
