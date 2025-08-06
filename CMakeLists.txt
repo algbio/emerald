@@ -1,27 +1,49 @@
-cmake_minimum_required(VERSION 3.9)
-# Get project name from folder name
-get_filename_component(ProjectId ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-string(REPLACE " " "_" ProjectId ${ProjectId})
-project(${ProjectId})
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}")
-# all .cpp files
-set(SOURCES src/main.cpp src/alpha_safe_paths.cpp src/optimal_paths.cpp src/safety_windows.cpp src/draw_subgraph.cpp)
-add_executable(${ProjectId} ${SOURCES})
-# compiler flags for debugging
-if (APPLE)
-    set(CMAKE_CXX_FLAGS "-O3 -openmp")
-else()
-    set(CMAKE_CXX_FLAGS "-O3 -fopenmp")
-endif()
+cmake_minimum_required(VERSION 3.15)
+project(emerald VERSION 2.0)
 
-# GMP
-find_package(GMP REQUIRED)
-# if .h files are in other folder?
-include_directories(./ ${GMP_INCLUDE_DIR})
-target_link_libraries(${ProjectId} ${GMP_LIBRARY})
-# OpenMP
-#find_package(OpenMP REQUIRED)
-#target_link_libraries(${ProjectId} OpenMP::OpenMP_CXX)
-# runnable output file
-set_target_properties(${ProjectId} PROPERTIES OUTPUT_NAME "emerald")
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Specify binary output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# Create library target
+add_library(emerald_lib
+    src/core/config.cpp
+    src/io/cli_handler.cpp
+    src/analysis/alignment_processor.cpp
+    src/io/alignment_writer.cpp
+)
+
+target_include_directories(emerald_lib PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# Create main executable
+add_executable(emerald src/main.cpp)
+target_link_libraries(emerald PRIVATE emerald_lib)
+
+# Testing configuration
+enable_testing()
+find_package(GTest REQUIRED)
+
+# Unit tests
+add_executable(unit_tests
+    tests/unit/core/config_test.cpp
+    tests/unit/io/cli_handler_test.cpp
+)
+
+target_link_libraries(unit_tests
+    PRIVATE
+    emerald_lib
+    GTest::GTest
+    GTest::Main
+)
+
+add_test(NAME unit_tests COMMAND unit_tests)
+
+# Create test directories
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/data/input)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/tests/data/output)
