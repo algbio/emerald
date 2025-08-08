@@ -19,7 +19,13 @@
 
 // Enum for predefined cost matrices
 enum CostMatrixType {
+    BLOSUM45,
+    BLOSUM50,
     BLOSUM62,
+    BLOSUM80,
+    BLOSUM90,
+    PAM30,
+    PAM70,
     PAM250,
     IDENTITY
 };

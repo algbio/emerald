@@ -12,8 +12,20 @@
 // Helper function to get a predefined cost matrix
 const int64_t (*get_cost_matrix(CostMatrixType matrix_type))[21] {
     switch (matrix_type) {
+        case BLOSUM45:
+            return BLOSUM45_MATRIX;
+        case BLOSUM50:
+            return BLOSUM50_MATRIX;
         case BLOSUM62:
             return BLOSUM62_MATRIX;
+        case BLOSUM80:
+            return BLOSUM80_MATRIX;
+        case BLOSUM90:
+            return BLOSUM90_MATRIX;
+        case PAM30:
+            return PAM30_MATRIX;
+        case PAM70:
+            return PAM70_MATRIX;
         case PAM250:
             return PAM250_MATRIX;
         case IDENTITY:
