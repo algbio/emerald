@@ -7,12 +7,10 @@
 #include <unordered_map>
 #include <sstream>
 #include <fstream>
+#include <utility> // for std::pair
 
 #ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
 #include <emscripten/bind.h>  // This is the crucial include for EMSCRIPTEN_BINDINGS
-#else
-#define EMSCRIPTEN_KEEPALIVE
 #endif
 
 #include "wasm_interface.h"
@@ -20,6 +18,7 @@
 #include "safety_windows.h"
 #include "optimal_paths.h"
 #include "write_json.h"
+#include "cost_matrices.h"
 
 // Helper function to generate alignment strings from a path
 std::pair<std::string, std::string> generate_alignment_strings(Dag &d, const std::vector<int64_t> &path, const Protein &a, const Protein &b) {
@@ -51,9 +50,9 @@ std::string generate_alignment_json(const std::string& representative_sequence,
     Protein mem(std::string(">" + member_descriptor));
     mem.sequence = member_sequence;
     
-    // Default cost matrix (BLOSUM62)
+    // Use default BLOSUM62 cost matrix
     int64_t SP = -1;
-    int64_t cost_matrix[21][21] = {
+    static const int64_t BLOSUM62_MATRIX[21][21] = {
         // Ala  Arg  Asn  Asp  Cys  Gln  Glu  Gly  His  Ile  Leu  Lys  Met  Phe  Pro  Ser  Thr  Trp  Tyr  Val  Def
         {   4,  -1,  -2,  -2,   0,  -1,  -1,   0,  -2,  -1,  -1,  -1,  -1,  -2,  -1,   1,   0,  -3,  -2,   0,  SP },
         {  -1,   5,   0,  -2,  -3,   1,   0,  -2,   0,  -3,  -2,   2,  -1,  -3,  -2,  -1,  -1,  -3,  -2,  -3,  SP },
@@ -77,6 +76,14 @@ std::string generate_alignment_json(const std::string& representative_sequence,
         {   0,  -3,  -3,  -3,  -1,  -2,  -2,  -3,  -3,   3,   1,  -2,   1,  -1,  -2,  -2,   0,  -3,  -1,   4,  SP },
         {  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP,  SP },
     };
+    
+    // Copy the default matrix to a mutable array
+    int64_t cost_matrix[21][21];
+    for (int i = 0; i < 21; i++) {
+        for (int j = 0; j < 21; j++) {
+            cost_matrix[i][j] = BLOSUM62_MATRIX[i][j];
+        }
+    }
     
     // Use defaults if not specified
     if (gap_cost == 0) gap_cost = -1;  
@@ -130,20 +137,7 @@ std::string generate_alignment_json(const std::string& representative_sequence,
 }
 
 // C-style wrapper implementation
-extern "C" {
-const char* generate_alignment_json_c(const char* refSeq, const char* refDesc, 
-                                    const char* memSeq, const char* memDesc,
-                                    float alpha, int64_t delta, int64_t gapCost, int64_t startGap) {
-    static std::string result_str;
-    
-    // Call the C++ version
-    result_str = generate_alignment_json(refSeq, refDesc, memSeq, memDesc, 
-                                      alpha, delta, gapCost, startGap);
-    
-    // Return pointer to the static buffer (will persist until next call)
-    return result_str.c_str();
-}
-}
+// C-style wrappers moved to c_wrappers.cpp to avoid conflicts with Emscripten headers
 
 #ifdef __EMSCRIPTEN__
 // Embind declarations
@@ -151,7 +145,19 @@ EMSCRIPTEN_BINDINGS(emerald_module) {
     using namespace emscripten;
     
     // Original direct JSON return function
-    function("generateAlignmentJson", &generate_alignment_json);
+    function("generateAlignmentJson", &generateAlignmentJson);
+    
+    // New functions with cost matrix selection
+    function("generateAlignmentJsonWithMatrix", &generateAlignmentJsonWithMatrix);
+    
+    // Custom matrix function - enable passing 2D arrays from JavaScript
+    function("generateAlignmentJsonWithCustomMatrix", &generateAlignmentJsonWithCustomMatrix);
+    
+    // Expose the CostMatrixType enum
+    enum_<CostMatrixType>("CostMatrixType")
+        .value("BLOSUM62", CostMatrixType::BLOSUM62)
+        .value("PAM250", CostMatrixType::PAM250)
+        .value("IDENTITY", CostMatrixType::IDENTITY);
 }
 #endif
 
@@ -160,10 +166,41 @@ std::string generateAlignmentJson(const std::string& refSeq,
                                 const std::string& refDesc,
                                 const std::string& memSeq, 
                                 const std::string& memDesc,
-                                float alpha = 0.75, 
-                                int64_t delta = 0,
-                                int64_t gapCost = -1, 
-                                int64_t startGap = -11) {
+                                float alpha, 
+                                int64_t delta,
+                                int64_t gapCost, 
+                                int64_t startGap) {
     // This function is just a wrapper around the main generate_alignment_json function
     return generate_alignment_json(refSeq, refDesc, memSeq, memDesc, alpha, delta, gapCost, startGap);
+}
+
+// Standalone wrapper for the matrix selection function
+std::string generateAlignmentJsonWithMatrix(const std::string& refSeq, 
+                                          const std::string& refDesc,
+                                          const std::string& memSeq, 
+                                          const std::string& memDesc,
+                                          int matrix_type,
+                                          float alpha, 
+                                          int64_t delta,
+                                          int64_t gapCost, 
+                                          int64_t startGap) {
+    // Convert the integer to enum type and call the appropriate function
+    return generate_alignment_json_with_matrix(refSeq, refDesc, memSeq, memDesc, 
+                                             static_cast<CostMatrixType>(matrix_type), 
+                                             alpha, delta, gapCost, startGap);
+}
+
+// Standalone wrapper for the custom matrix function
+std::string generateAlignmentJsonWithCustomMatrix(const std::string& refSeq, 
+                                                const std::string& refDesc,
+                                                const std::string& memSeq, 
+                                                const std::string& memDesc,
+                                                const std::vector<std::vector<int64_t>>& custom_matrix,
+                                                float alpha, 
+                                                int64_t delta,
+                                                int64_t gapCost, 
+                                                int64_t startGap) {
+    // Pass through to the implementation function
+    return generate_alignment_json_with_custom_matrix(refSeq, refDesc, memSeq, memDesc, 
+                                                    custom_matrix, alpha, delta, gapCost, startGap);
 }
