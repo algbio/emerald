@@ -8,9 +8,12 @@
 
 class Application {
 public:
-    explicit Application(const Config& config) 
-        : config_(config),
-          alignment_processor_(config) {}
+    explicit Application(
+        const Config& config,
+        std::unique_ptr<SequenceReader> reader = std::make_unique<DefaultSequenceReader>()
+    ) : config_(config),
+        alignment_processor_(config),
+        sequence_reader_(std::move(reader)) {}
 
     int run() {
         try {
@@ -25,9 +28,9 @@ public:
 
 private:
     std::vector<std::unique_ptr<Sequence>> readSequences() {
-        auto sequences = SequenceReader::readSequences(
+        auto sequences = sequence_reader_->readFasta(
             config_.input_file, 
-            config_.ignore_special
+            config_.sequence_type
         );
         
         if (sequences.empty()) {
@@ -39,4 +42,5 @@ private:
 
     const Config& config_;
     AlignmentProcessor alignment_processor_;
+    std::unique_ptr<SequenceReader> sequence_reader_;
 };

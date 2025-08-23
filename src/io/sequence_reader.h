@@ -1,15 +1,22 @@
 #pragma once
 #include "../core/sequence.h"
+#include "../core/sequence_factory.h"
+#include <string>
 #include <vector>
 #include <memory>
 
 class SequenceReader {
 public:
-    static std::vector<std::unique_ptr<Sequence>> readSequences(
-        const std::string& filename,
-        bool ignoreSpecial
-    ) {
-        // Stub implementation for testing
-        return {};
-    }
+    virtual ~SequenceReader() = default;
+    
+    virtual std::vector<std::unique_ptr<Sequence>> readFasta(
+        const std::string& filename, 
+        SequenceType type = SequenceType::PROTEIN) = 0;
+};
+
+class DefaultSequenceReader : public SequenceReader {
+public:
+    std::vector<std::unique_ptr<Sequence>> readFasta(
+        const std::string& filename, 
+        SequenceType type = SequenceType::PROTEIN) override;
 };

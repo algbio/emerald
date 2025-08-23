@@ -1,21 +1,27 @@
 #pragma once
+#include "sequence_alphabet.h"
 #include <string>
-#include <vector>
+#include <memory>
 
 class Sequence {
-protected:
-    std::string sequence_;
-    std::string descriptor_;
-
 public:
-    Sequence(const std::string& descriptor, const std::string& sequence)
-        : sequence_(sequence), descriptor_(descriptor) {}
+    Sequence(const std::string& descriptor, const std::string& sequence, 
+             std::shared_ptr<SequenceAlphabet> alphabet)
+        : descriptor_(descriptor), sequence_(sequence), alphabet_(alphabet) {}
     
-    virtual ~Sequence() = default;
-    
-    const std::string& getSequence() const { return sequence_; }
     const std::string& getDescriptor() const { return descriptor_; }
+    const std::string& getSequence() const { return sequence_; }
+    std::shared_ptr<SequenceAlphabet> getAlphabet() const { return alphabet_; }
     
-    virtual bool isValidSymbol(char symbol) const = 0;
-    virtual std::vector<char> getAlphabet() const = 0;
+    bool isValid() const {
+        for (char c : sequence_) {
+            if (!alphabet_->isValidCharacter(c)) return false;
+        }
+        return true;
+    }
+    
+private:
+    std::string descriptor_;
+    std::string sequence_;
+    std::shared_ptr<SequenceAlphabet> alphabet_;
 };
