@@ -155,7 +155,13 @@ EMSCRIPTEN_BINDINGS(emerald_module) {
     
     // Expose the CostMatrixType enum
     enum_<CostMatrixType>("CostMatrixType")
+        .value("BLOSUM45", CostMatrixType::BLOSUM45)
+        .value("BLOSUM50", CostMatrixType::BLOSUM50)
         .value("BLOSUM62", CostMatrixType::BLOSUM62)
+        .value("BLOSUM80", CostMatrixType::BLOSUM80)
+        .value("BLOSUM90", CostMatrixType::BLOSUM90)
+        .value("PAM30", CostMatrixType::PAM30)
+        .value("PAM70", CostMatrixType::PAM70)
         .value("PAM250", CostMatrixType::PAM250)
         .value("IDENTITY", CostMatrixType::IDENTITY);
 }
