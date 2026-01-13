@@ -25,7 +25,7 @@ public:
             }
             if (upper == 'E' || upper == 'F' || upper == 'I' || upper == 'L' || 
                 upper == 'P' || upper == 'Q' || upper == 'Z') {
-                protein_chars++; // These are unique to proteins
+                protein_chars++;
             }
         }
         

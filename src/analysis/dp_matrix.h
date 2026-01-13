@@ -8,7 +8,7 @@
 class DPMatrix {
 public:
     using EdgeMatrix = std::vector<std::vector<std::vector<std::vector<AlignmentEdge>>>>;
-    using ScoreMatrix = std::vector<std::vector<std::vector<int64_t>>>;  // Changed to int64_t
+    using ScoreMatrix = std::vector<std::vector<std::vector<int64_t>>>;
     
     DPMatrix(size_t n, size_t m);
     

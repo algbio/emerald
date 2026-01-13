@@ -20,25 +20,33 @@ std::vector<SafetyWindow> SafetyWindowCalculator::computeSafetyWindows(
     size_t n, size_t m) {
     
     if (alignment_result.delta_neighborhood.empty()) {
+        if (config_.verbose) {
+            std::cout << "No edges in delta neighborhood, no safety windows." << std::endl;
+        }
         return {};
+    }
+    if (config_.verbose) {
+        std::cout << "Computing safety windows from delta neighborhood with "
+              << alignment_result.delta_neighborhood.size() << " edges." << std::endl;
     }
 
     // Build a graph representation from the delta neighborhood
-    std::unordered_map<size_t, std::vector<size_t>> graph;
-    std::unordered_map<size_t, std::vector<size_t>> reverse_graph;
+    std::unordered_map<size_t, std::vector<size_t>> graph, reverse_graph;
+    std::vector<size_t> topo_order;
+    std::vector<size_t> alignment_with_all_safe_edges;
     std::unordered_map<std::pair<size_t, size_t>, int64_t, PairHash> edge_cost;
     std::unordered_map<size_t, std::pair<size_t, size_t>> node_position;
     
     // Function to convert (i,j,state) to unique node ID
-    auto nodeToId = [m](size_t i, size_t j, int state) {
+    auto nodeToId = [m](size_t i, size_t j, int state) -> size_t {
         return i * (m+1) * 3 + j * 3 + state;
     };
     
     // Function to extract (i,j,state) from node ID
     auto idToNode = [m](size_t id) -> std::tuple<size_t, size_t, int> {
         int state = id % 3;
-        size_t j = (id / 3) % (m+1);
-        size_t i = id / ((m+1) * 3);
+        size_t j = ((id - state) / 3) % (m+1);
+        size_t i = (id - state - 3*j) / ((m+1) * 3);
         return {i, j, state};
     };
     
@@ -75,10 +83,7 @@ std::vector<SafetyWindow> SafetyWindowCalculator::computeSafetyWindows(
     paths_to[source] = 1.0;
     
     // Topological sort
-    std::vector<size_t> topo_order;
     std::unordered_set<size_t> visited;
-    
-    // DFS for topological sort
     std::function<void(size_t)> dfs = [&](size_t node) {
         visited.insert(node);
         if (graph.count(node)) {
@@ -94,13 +99,13 @@ std::vector<SafetyWindow> SafetyWindowCalculator::computeSafetyWindows(
     dfs(source);
     std::reverse(topo_order.begin(), topo_order.end());
 
-// Build a rank map from the forward topological order (before clearing it later)
+    // Build a rank map from the forward topological order (before clearing it later)
     std::unordered_map<size_t, size_t> topo_rank;
     for (size_t idx = 0; idx < topo_order.size(); ++idx) {
         topo_rank[topo_order[idx]] = idx;
     }
 
-// Compute paths to each node using topological ordering
+    // Compute paths to each node using topological ordering
     for (size_t node : topo_order) {
         assert (reverse_graph.count(node) || node == source);
         if (reverse_graph.count(node)) {
@@ -114,27 +119,8 @@ std::vector<SafetyWindow> SafetyWindowCalculator::computeSafetyWindows(
     std::unordered_map<size_t, double> paths_from;
     paths_from[sink] = 1.0;
     
-    topo_order.clear();
-    visited.clear();
-    
-    // Reverse DFS for reverse topological sort
-    std::function<void(size_t)> reverse_dfs = [&](size_t node) {
-        visited.insert(node);
-        if (reverse_graph.count(node)) {
-            for (size_t prev : reverse_graph[node]) {
-                if (!visited.count(prev)) {
-                    reverse_dfs(prev);
-                }
-            }
-        }
-        topo_order.push_back(node);
-    };
-    
-    reverse_dfs(sink);
-    std::reverse(topo_order.begin(), topo_order.end());
-    
-    // Compute paths from each node using reverse topological ordering
-    for (size_t node : topo_order) {
+    for (auto it = topo_order.rbegin(); it != topo_order.rend(); ++it) {
+        size_t node = *it;
         assert (graph.count(node) || node == sink);
         if (graph.count(node)) {
             for (size_t next : graph[node]) {
@@ -157,8 +143,7 @@ std::vector<SafetyWindow> SafetyWindowCalculator::computeSafetyWindows(
     
     // Step 3: Find edges that appear in at least alpha fraction of all paths
     double alpha = config_.alpha;
-    std::vector<std::tuple<size_t, size_t, size_t, size_t, double>> high_freq_edges;
-    std::vector<std::pair<size_t, size_t>> order; // (topo_rank[src], index into high_freq_edges)
+    std::vector<std::pair<size_t, size_t>> high_freq_edges;
 
     for (const auto& [src, dests] : graph) {
         for (size_t dst : dests) {
@@ -166,70 +151,72 @@ std::vector<SafetyWindow> SafetyWindowCalculator::computeSafetyWindows(
             double freq = (paths_to[src] * paths_from[dst]) / total_paths;
 
             if (freq >= alpha) {
-                auto [i_src, j_src, _] = idToNode(src);
-                auto [i_dst, j_dst, __] = idToNode(dst);
-                high_freq_edges.emplace_back(i_src, j_src, i_dst, j_dst, freq);
-                order.emplace_back(topo_rank[src], high_freq_edges.size() - 1);
+                high_freq_edges.emplace_back(src, dst);
             }
         }
     }
 
+    if (config_.verbose) {
+        std::cout << "Found " << high_freq_edges.size() 
+                  << " high-frequency edges with alpha=" << alpha << std::endl;
+    }
+
     // Sort edges by DAG order (source node’s topo rank), then by (i_src, j_src) for stability
-    std::sort(order.begin(), order.end(), [&](const auto& a, const auto& b) {
-        if (a.first != b.first) return a.first < b.first;
-        const auto& ea = high_freq_edges[a.second];
-        const auto& eb = high_freq_edges[b.second];
-        if (std::get<0>(ea) != std::get<0>(eb)) return std::get<0>(ea) < std::get<0>(eb); // i_src
-        return std::get<1>(ea) < std::get<1>(eb); // j_src
+    std::sort(high_freq_edges.begin(), high_freq_edges.end(), [&](const auto& a, const auto& b) {
+        const auto& [u, v] = a;
+        const auto& [x, y] = b;
+        if (u != x) return topo_rank[u] < topo_rank[x];
+        return topo_rank[v] < topo_rank[y];
     });
 
     // Step 4: Group high-frequency edges into windows, iterating in DAG order
     std::vector<SafetyWindow> windows;
-    if (order.empty()) {
+    if (high_freq_edges.empty()) {
         return windows;
     }
-
-    auto [start_i, start_j, end_i, end_j, sum_conf] = high_freq_edges[order[0].second];
-    int edge_count = 1;
-
-    size_t min_window_size = config_.min_window_size;
-    size_t window_gap = config_.safety_window_size;
-
-    for (size_t k = 1; k < order.size(); ++k) {
-        const auto& e = high_freq_edges[order[k].second];
-        size_t i_src = std::get<0>(e);
-        size_t j_src = std::get<1>(e);
-        size_t i_dst = std::get<2>(e);
-        size_t j_dst = std::get<3>(e);
-        double freq   = std::get<4>(e);
-
-        // If this edge continues the current window (within gap tolerance)
-        if (i_src <= end_i + window_gap) {
-            end_i = std::max(end_i, i_dst);
-            end_j = std::max(end_j, j_dst);
-            sum_conf += freq;
-            edge_count++;
-        } else {
-            if (end_i - start_i + 1 >= min_window_size) {
-                windows.emplace_back(start_i, end_i, start_j, end_j, sum_conf / edge_count);
-            }
-            start_i = i_src; start_j = j_src;
-            end_i = i_dst;   end_j = j_dst;
-            sum_conf = freq; edge_count = 1;
-        }
-    }
-
-    if (end_i - start_i + 1 >= min_window_size) {
-        windows.emplace_back(start_i, end_i, start_j, end_j, sum_conf / edge_count);
-    }
+    auto outside = [&](const size_t &L, const size_t &R) {
+        if (windows.empty()) return false;
+        auto [bL, bR, _] = windows.back();
+        return topo_rank[bL] >= topo_rank[L] && topo_rank[bR] <= topo_rank[R];
+    };
+    auto inside = [&](const size_t &L, const size_t &R) {
+        if (windows.empty()) return false;
+        auto [bL, bR, _] = windows.back();
+        return topo_rank[L] >= topo_rank[bL] && topo_rank[R] <= topo_rank[bR];
+    };
+    double a = (paths_to[high_freq_edges[0].first] * paths_from[high_freq_edges[0].second]) / total_paths;
+	for (size_t L = 0, R = 0; R < high_freq_edges.size();
+            a = a * (R + 1 == high_freq_edges.size() ? 1 : paths_from[high_freq_edges[R + 1].second]) / paths_from[high_freq_edges[R].second], R++) {
+		while (L < R && a < alpha) {
+			a = a * paths_to[high_freq_edges[L + 1].first] / paths_to[high_freq_edges[L].first];
+			L++;
+		}
+		while (outside(high_freq_edges[L].first, high_freq_edges[R].second)) windows.pop_back();
+		if (L < R && !inside(high_freq_edges[L].first, high_freq_edges[R].second)) windows.emplace_back(high_freq_edges[L].first, high_freq_edges[R].second, a);
+	}  
     
     if (config_.verbose) {
+        std::cout << std::endl;
+        for (size_t i = 0; i < high_freq_edges.size(); ++i) {
+            const auto& [src, dst] = high_freq_edges[i];
+            const auto& [src_i, src_j, src_state] = idToNode(src);
+            const auto& [dst_i, dst_j, dst_state] = idToNode(dst);
+            double freq = (paths_to[src] * paths_from[dst]) / total_paths;
+            std::cout << "High-freq edge " << i+1 << ": " << src << '-' << dst << " "
+                      << "(" << src_i << "," << src_j << "," << src_state << ") -> "
+                      << "(" << dst_i << "," << dst_j << "," << dst_state << ") "
+                      << "Freq: " << freq * 100 << '%' << std::endl;
+        }
+        std::cout << std::endl;
         std::cout << "Found " << windows.size() << " safety windows with alpha=" 
                   << alpha << std::endl;
         for (const auto& window : windows) {
-            std::cout << "Window: " << window.start_pos << "-" << window.end_pos
-                      << " (target: " << window.target_start << "-" << window.target_end
-                      << "), confidence: " << window.confidence << std::endl;
+            const auto& [rep_start, mem_start, _] = idToNode(window.start_pos);
+            const auto& [rep_end, mem_end, __] = idToNode(window.end_pos);
+            std::cout << "Window graph indices: " << window.start_pos << "-" << window.end_pos
+                      << ", Representative: " << rep_start << "-" << rep_end
+                      << ", Member: " << mem_start << "-" << mem_end
+                      << ", Safety: " << window.ratio * 100 << '%' << std::endl;
         }
     }
     

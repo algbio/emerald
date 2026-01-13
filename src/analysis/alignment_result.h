@@ -9,19 +9,16 @@
 struct SafetyWindow {
     size_t start_pos;      // Start position in reference sequence
     size_t end_pos;        // End position in reference sequence
-    size_t target_start;   // Corresponding start in target sequence
-    size_t target_end;     // Corresponding end in target sequence
-    double confidence;     // Confidence score (0.0-1.0)
+    double ratio;         // Confidence score (0.0-1.0)
     
-    SafetyWindow(size_t start, size_t end, size_t t_start, size_t t_end, double conf)
-        : start_pos(start), end_pos(end), 
-          target_start(t_start), target_end(t_end),
-          confidence(conf) {}
+    SafetyWindow(size_t start, size_t end, double ratio)
+        : start_pos(start), end_pos(end),
+          ratio(ratio) {}
 };
 
 struct AlignmentResult {
-    int64_t optimal_score;  // Can be negative depending on scoring matrix!
-    std::vector<GraphEdge> delta_neighborhood;  // Renamed from alignment_path - all edges within delta of optimal
+    int64_t optimal_score;
+    std::vector<GraphEdge> delta_neighborhood;
     std::vector<SafetyWindow> safety_windows;
     std::map<std::string, double> statistics;
     

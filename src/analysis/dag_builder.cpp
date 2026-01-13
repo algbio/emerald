@@ -33,26 +33,26 @@ DAGBuilder::AlignmentResult DAGBuilder::buildDAG(
                 AlignmentNode source_node(i, j, static_cast<AlignmentState>(k));
                 
                 for (const auto& edge : edge_matrix[i][j][k]) {
-                    // Fix: Cast the target state to int for array indexing
                     int target_state_idx = static_cast<int>(edge.getTargetState());
                     int64_t path_score = forward_scores[i][j][k] + edge.getTransitionCost() + 
                                        backward_scores[edge.getTargetN()][edge.getTargetM()][target_state_idx];
                     
+                    //std::cerr << path_score << ' ' << delta_threshold << std::endl;
+                    //std::cerr << forward_scores[i][j][k] << ' ' << backward_scores[edge.getTargetN()][edge.getTargetM()][target_state_idx] << ' ' << edge.getTransitionCost() << std::endl;
+
                     // Include edge in delta-neighborhood if within threshold
                     if (path_score >= delta_threshold) {
-                        // Create target node for this specific edge
                         AlignmentNode target_node(
                             edge.getTargetN(), 
                             edge.getTargetM(), 
                             edge.getTargetState()
                         );
-                        
-                        // Add this edge to the delta neighborhood
                         result.delta_neighborhood.emplace_back(
                             source_node, 
                             target_node, 
                             edge.getTransitionCost()
                         );
+                        std::cerr << "Adding edge: " << result.delta_neighborhood.back().toString() << " with path score " << path_score << std::endl;
                     }
                 }
             }

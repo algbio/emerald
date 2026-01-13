@@ -15,7 +15,7 @@ struct Config {
     SequenceType sequence_type = SequenceType::PROTEIN;
     
     // Algorithm parameters
-    int64_t delta = 10;
+    int64_t delta = 8;
     int64_t gap_cost = -1;
     int64_t start_gap = -11;
     int64_t special_score = -5;

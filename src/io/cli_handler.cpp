@@ -64,6 +64,7 @@ Optional parameters:
   -e, --startgap INT     Gap start cost (default: -11)
   -s, --special VAL      Special character score (default: -5). Use 'INF' to ignore specials.
   -m, --windowmerge      Merge adjacent/intersecting safety windows (default: off)
+  -t, --type STR         Sequence type: 'protein' or 'dna' (default: protein)
 
 Output options:
   -j, --json FILE        Write detailed results to JSON file
@@ -98,6 +99,7 @@ Config CliHandler::parseCommandLine(int argc, char** argv) {
         {"startgap", required_argument, nullptr, 'e'},
         {"special", required_argument, nullptr, 's'},
         {"windowmerge", no_argument, nullptr, 'm'},
+        {"type", required_argument, nullptr, 't'},
         {"json", required_argument, nullptr, 'j'},
         {"reference", required_argument, nullptr, 'r'},
         {"drawgraph", required_argument, nullptr, 'w'},
@@ -166,6 +168,20 @@ Config CliHandler::parseCommandLine(int argc, char** argv) {
                 case 'm':
                     config.window_merge = true;
                     break;
+                case 't': {
+                    if (!optarg || *optarg == '\0') {
+                        throw std::runtime_error("Empty sequence type provided");
+                    }
+                    std::string type_str = optarg;
+                    if (type_str == "protein") {
+                        config.sequence_type = SequenceType::PROTEIN;
+                    } else if (type_str == "dna") {
+                        config.sequence_type = SequenceType::DNA;
+                    } else {
+                        throw std::runtime_error("Invalid sequence type: " + type_str + ". Valid options are 'protein' or 'dna'.");
+                    }
+                    break;
+                }
                 case 'j':
                     if (!optarg || *optarg == '\0') {
                         throw std::runtime_error("Empty JSON file path");

@@ -31,7 +31,7 @@ void AlignmentProcessor::processAllPairs(const std::vector<std::unique_ptr<Seque
 
 size_t AlignmentProcessor::findReferenceSequence(const std::vector<std::unique_ptr<Sequence>>& sequences) {
     for (size_t i = 0; i < sequences.size(); ++i) {
-        if (sequences[i]->getDescriptor() == config_.reference_protein) {
+        if (sequences[i]->getDescriptor() == config_.reference_protein) { // todo: find a better way
             return i;
         }
     }
@@ -78,15 +78,15 @@ AlignmentProcessor::computeOptimalAlignment(const std::string& a, const std::str
     auto forward_scores = dp_matrix.computeForwardDP();
     auto backward_scores = dp_matrix.computeBackwardDP();
     
-    const int64_t optimal_score = forward_scores[n][m][0];  // Changed to int64_t
+    const int64_t optimal_score = forward_scores[n][m][0];
     
     if (config_.verbose) {
         std::cout << "Optimal alignment score: " << optimal_score << std::endl;
     }
     
     // Build delta-neighborhood DAG
-    DAGBuilder dag_builder(config_);
-    auto alignment_result = dag_builder.buildDAG(dp_matrix.getEdgeMatrix(),
+    DAGBuilder suboptimal_alignment_space(config_);
+    auto alignment_result = suboptimal_alignment_space.buildDAG(dp_matrix.getEdgeMatrix(),
                                forward_scores, backward_scores, 
                                optimal_score, n, m);
 
@@ -95,7 +95,7 @@ AlignmentProcessor::computeOptimalAlignment(const std::string& a, const std::str
     auto windows = sw_calc.computeSafetyWindows(
         alignment_result, forward_scores, backward_scores, n, m);
 
-    // Attach to result (expects AlignmentResult to have `std::vector<SafetyWindow> safety_windows`)
+    // Attach to result
     alignment_result.safety_windows = std::move(windows);
 
     return alignment_result;

@@ -3,6 +3,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
+#include <assert.h>
 
 void ScoringMatrix::initializeDefaultMatrix() {
     size_t alphabet_size = alphabet_->getAlphabetSize();
@@ -34,10 +35,14 @@ void ScoringMatrix::initializeDefaultMatrix() {
             {  0, -3, -3, -3, -1, -2, -2, -3, -3,  3,  1, -2,  1, -1, -2, -2,  0, -3, -1,  4 }  // V
         };
         
-        // Copy values to our matrix
         for (size_t i = 0; i < alphabet_size; ++i) {
             for (size_t j = 0; j < alphabet_size; ++j) {
                 matrix_[i][j] = blosum62[i][j];
+            }
+        }
+        for (size_t i = 0; i < alphabet_size; ++i) {
+            for (size_t j = i + 1; j < alphabet_size; ++j) {
+                assert (matrix_[j][i] == matrix_[i][j]); // Ensure symmetry
             }
         }
     } else if (alphabet_->getType() == SequenceType::DNA) {
@@ -68,11 +73,11 @@ void ScoringMatrix::loadFromFile(const std::string& filename) {
         int64_t value;
         
         while (iss >> value && col < alphabet_size) {
-            matrix_[row][col] = value;
+            matrix_[row][col] = matrix_[col][row] = value;
             ++col;
         }
         
-        if (col != alphabet_size) {
+        if (col != row + 1) {
             throw std::runtime_error("Invalid scoring matrix format at row " + std::to_string(row));
         }
         ++row;

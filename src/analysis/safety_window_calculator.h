@@ -37,6 +37,10 @@ public:
         const DPMatrix::ScoreMatrix& backward_scores,
         size_t n, size_t m);
     
+    std::vector<size_t> findAlignmentWithAllSafeEdges(
+        const std::vector<std::pair<size_t, size_t>> high_freq_edges,
+        size_t n, size_t m);
+    
 private:
     const Config& config_;
 };

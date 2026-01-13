@@ -13,8 +13,8 @@ void Config::validateConfig() const {
         throw std::runtime_error("Gap cost must be negative");
     }
     
-    if (start_gap >= 0) {
-        throw std::runtime_error("Start gap cost must be negative");
+    if (start_gap > 0) {
+        throw std::runtime_error("Start gap cost can not be positive");
     }
     
     if (!ignore_special && special_score >= 0) {

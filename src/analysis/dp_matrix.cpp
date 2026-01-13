@@ -55,8 +55,8 @@ void DPMatrix::addTransitions(size_t i, size_t j, const std::string& seq_a,
 
 DPMatrix::ScoreMatrix DPMatrix::computeForwardDP() {
     ScoreMatrix dp(n_ + 1, 
-        std::vector<std::vector<int64_t>>(m_ + 1,  // Changed to int64_t
-        std::vector<int64_t>(3, -(1LL << 30))));   // Changed to int64_t min value
+        std::vector<std::vector<int64_t>>(m_ + 1,
+        std::vector<int64_t>(3, -(1LL << 30))));
     
     dp[0][0][stateToIndex(AlignmentState::MATCH)] = 0;
     
@@ -69,7 +69,7 @@ DPMatrix::ScoreMatrix DPMatrix::computeForwardDP() {
                     int target_state = stateToIndex(edge.getTargetState());
                     dp[edge.getTargetN()][edge.getTargetM()][target_state] = std::max(
                         dp[edge.getTargetN()][edge.getTargetM()][target_state], 
-                        dp[i][j][k] + edge.getTransitionCost()  // No cast needed with int64_t
+                        dp[i][j][k] + edge.getTransitionCost()
                     );
                 }
             }
@@ -81,21 +81,20 @@ DPMatrix::ScoreMatrix DPMatrix::computeForwardDP() {
 
 DPMatrix::ScoreMatrix DPMatrix::computeBackwardDP() {
     ScoreMatrix dpr(n_ + 1, 
-        std::vector<std::vector<int64_t>>(m_ + 1,  // Changed to int64_t
-        std::vector<int64_t>(3, -(1LL << 30))));   // Changed to int64_t min value
+        std::vector<std::vector<int64_t>>(m_ + 1,
+        std::vector<int64_t>(3, -(1LL << 30))));
     
     dpr[n_][m_][stateToIndex(AlignmentState::MATCH)] = 0;
     
-    for (int64_t i = n_; i >= 0; --i) {  // Use int64_t for signed comparison
-        for (int64_t j = m_; j >= 0; --j) {  // Use int64_t for signed comparison
+    for (int64_t i = n_; i >= 0; --i) {
+        for (int64_t j = m_; j >= 0; --j) {
             for (int k = 0; k <= 2; ++k) {
-                if (dpr[i][j][k] <= -(1LL << 30)) continue;
-                
                 for (const auto& edge : edge_matrix_[i][j][k]) {
                     int target_state = stateToIndex(edge.getTargetState());
-                    dpr[edge.getTargetN()][edge.getTargetM()][target_state] = std::max(
-                        dpr[edge.getTargetN()][edge.getTargetM()][target_state], 
-                        dpr[i][j][k] + edge.getTransitionCost()  // No cast needed
+                    if (dpr[edge.getTargetN()][edge.getTargetM()][target_state] <= -(1LL << 30)) continue;
+                    dpr[i][j][k] = std::max(
+                        dpr[i][j][k],
+                        dpr[edge.getTargetN()][edge.getTargetM()][target_state] + edge.getTransitionCost()
                     );
                 }
             }
