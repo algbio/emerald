@@ -49,7 +49,7 @@ void ScoringMatrix::initializeDefaultMatrix() {
         // Simple identity matrix for DNA
         for (size_t i = 0; i < alphabet_size; ++i) {
             for (size_t j = 0; j < alphabet_size; ++j) {
-                matrix_[i][j] = (i == j) ? 5 : -4;  // Match = 5, mismatch = -4
+                matrix_[i][j] = (i == j) ? 0 : -1;  // edit distance: 0 for match, -1 for mismatch
             }
         }
     }

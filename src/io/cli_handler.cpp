@@ -59,10 +59,14 @@ Required options:
 
 Optional parameters:
   -a, --alpha FLOAT      Safety threshold (default: 0.75)
-  -d, --delta INT        Suboptimal paths neighborhood (default: 10)
+  -d, --delta INT        Suboptimal paths neighborhood: add a match/gap, 
+                            if its optimal alignment is at most delta away from the optimal alignment cost (default: 10)
   -g, --gapcost INT      Gap extension cost (default: -1)
   -e, --startgap INT     Gap start cost (default: -11)
-  -s, --special VAL      Special character score (default: -5). Use 'INF' to ignore specials.
+  -s, --special VAL      Special character score (default: -1). Use 'INF' to ignore specials.
+  -c, --costmat FILE     Custom scoring matrix file (default: BLOSUM62 for protein, identity for DNA)
+                            Format: plain-text triangle matrix (i.e., only lower half)
+                            row/col order: A R N D C Q E G H I L K M F P S T W Y V for protein, A C G T for DNA
   -m, --windowmerge      Merge adjacent/intersecting safety windows (default: off)
   -t, --type STR         Sequence type: 'protein' or 'dna' (default: protein)
 
