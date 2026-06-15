@@ -103,8 +103,10 @@ std::vector<Protein> proteins;
 int64_t global_ref = -1; // reference protein
 std::vector<int64_t> random_order_of_alignments;
 
-void run_case(const int64_t j, const int64_t ref, std::vector<std::stringbuf> &output) {
-	int64_t i = random_order_of_alignments[j];
+void run_case(const int64_t j, const int64_t ref_, std::vector<std::stringbuf> &output) {
+    int i = random_order_of_alignments[j];
+    int64_t ref = random_order_of_alignments[ref_];
+
 	std::ostream output_stream(&(output[i]));
 	const std::string &a = proteins[ref].sequence;
 	const std::string &b = proteins[i].sequence;
@@ -409,21 +411,21 @@ int main(int argc, char **argv) {
 	std::ofstream output_stream;
 	output_stream.open(output_file, std::ofstream::app);
 
-	// reference protein and number of proteins in the cluster
-	for (int64_t ref = 1; ref < PS; ref++) {
+    random_order_of_alignments.clear();
+    for (int64_t i = 0; i < PS; i++) random_order_of_alignments.push_back(i);
+    if (threads > 1) {
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(random_order_of_alignments.begin(), random_order_of_alignments.end(), g);
+    }
+    #pragma omp parallel for num_threads(threads)
+    for (int64_t ref_ = 1; ref_ < PS; ref_++) {
+        int64_t ref = random_order_of_alignments[ref_];
+
 		output_stream << proteins[ref].descriptor << '\n' << proteins[ref].sequence << '\n';
 		std::vector<std::stringbuf> output(PS); // TODO: Do we really want to do this?
-		random_order_of_alignments.clear();
-		for (int64_t i = 0; i < ref; i++) random_order_of_alignments.push_back(i);
-		if (threads > 1) {
-			std::random_device rd;
-			std::mt19937 g(rd());
-			std::shuffle(random_order_of_alignments.begin(), random_order_of_alignments.end(), g);
-		}
-
-		#pragma omp parallel for num_threads(threads)
-		for (int64_t j = 0; j < ref; j++)
-			run_case(j, ref, output);
+		for (int64_t j = 0; j < ref_; j++)
+			run_case(j, ref_, output);
 
 		for (int64_t i = 0; i < PS; i++) if (i != ref) output_stream << output[i].str();
 		if (ref+1 < PS) output_stream << '\n';
